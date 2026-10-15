@@ -1,0 +1,27 @@
+{
+  "name": "punto-y-fama",
+  "version": "1.0.0",
+  "description": "Juego completo de Punto y Fama (Bulls and Cows) multi-usuario con lógica estricta, entrada dual, historial dinámico y efectos.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test/runAll.js"
+  },
+  "keywords": [
+    "punto-y-fama",
+    "bulls-and-cows",
+    "mastermind",
+    "multi-user",
+    "tailwind",
+    "game"
+  ],
+  "author": "Google DeepMind Agent",
+  "license": "MIT",
+  "dependencies": {
+    "qrcode": "^1.5.4",
+    "ws": "^8.22.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

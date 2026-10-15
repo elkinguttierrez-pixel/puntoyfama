@@ -1,0 +1,149 @@
+/* Estilos personalizados y efectos de neón para Punto y Fama */
+
+:root {
+  --color-fama: #10b981;
+  --color-fama-glow: rgba(16, 185, 129, 0.45);
+  --color-punto: #06b6d4;
+  --color-punto-glow: rgba(6, 182, 212, 0.45);
+  --color-accent: #6366f1;
+  --color-gold: #f59e0b;
+}
+
+/* Scrollbar estilizada */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.6);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(51, 65, 85, 0.8);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 1);
+}
+
+/* Efectos de resplandor Neón para Famas y Puntos */
+.glow-fama {
+  color: #34d399;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(5, 150, 105, 0.25));
+  border: 1px solid rgba(52, 211, 153, 0.5);
+  box-shadow: 0 0 14px var(--color-fama-glow), inset 0 0 8px rgba(16, 185, 129, 0.2);
+  text-shadow: 0 0 8px rgba(52, 211, 153, 0.6);
+}
+
+.glow-punto {
+  color: #38bdf8;
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.15), rgba(14, 165, 233, 0.25));
+  border: 1px solid rgba(56, 189, 248, 0.5);
+  box-shadow: 0 0 14px var(--color-punto-glow), inset 0 0 8px rgba(6, 182, 212, 0.2);
+  text-shadow: 0 0 8px rgba(56, 189, 248, 0.6);
+}
+
+.glow-box-fama {
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.4), 0 0 40px rgba(16, 185, 129, 0.15);
+  border-color: rgba(52, 211, 153, 0.8);
+}
+
+.glow-card {
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.glow-input-active {
+  border-color: #6366f1 !important;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.35), 0 0 15px rgba(99, 102, 241, 0.5) !important;
+  transform: translateY(-2px);
+}
+
+/* Animaciones suaves */
+@keyframes slideDownFade {
+  from {
+    opacity: 0;
+    transform: translateY(-14px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-history-item {
+  animation: slideDownFade 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.02);
+  }
+}
+
+.pulse-glow {
+  animation: pulseGlow 2.5s infinite ease-in-out;
+}
+
+@keyframes shakeX {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-6px); }
+  40%, 80% { transform: translateX(6px); }
+}
+
+.animate-shake {
+  animation: shakeX 0.4s ease-in-out;
+}
+
+/* Teclado en pantalla */
+.keypad-btn {
+  transition: all 0.1s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+
+.keypad-btn:active {
+  transform: scale(0.92);
+  filter: brightness(1.25);
+}
+
+/* Celdas de Dígitos */
+.digit-slot {
+  transition: all 0.15s ease-in-out;
+  cursor: pointer;
+  user-select: none;
+}
+
+.digit-slot:hover {
+  border-color: rgba(148, 163, 184, 0.5);
+}
+
+/* Efecto de fondo estrellado / sutil gradiente cósmico */
+body {
+  background: radial-gradient(circle at 50% 0%, #1e1b4b 0%, #0f172a 45%, #020617 100%);
+  min-height: 100vh;
+}
+
+/* Badges con gradiente */
+.badge-neutral {
+  color: #94a3b8;
+  background: rgba(51, 65, 85, 0.25);
+  border: 1px solid rgba(71, 85, 105, 0.4);
+}
+
+/* Canvas para partículas fallback si no hay conexión a internet */
+#fallback-confetti-canvas {
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 99999;
+}

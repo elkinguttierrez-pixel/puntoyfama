@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Punto y Fama | Pantalla Central en Vivo</title>
+  
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2310b981'><path d='M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z'/></svg>" />
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0fdf4',
+              500: '#10b981',
+              600: '#059669',
+              900: '#064e3b'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+            mono: ['JetBrains Mono', 'Fira Code', 'monospace']
+          }
+        }
+      }
+    };
+  </script>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700;800;900&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="css/styles.css" />
+
+  <!-- Canvas Confetti CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+</head>
+<body class="text-slate-100 min-h-screen flex flex-col antialiased selection:bg-emerald-500 selection:text-slate-900 pb-8 overflow-x-hidden">
+
+  <!-- Canvas partículas de respaldo -->
+  <canvas id="fallback-confetti-canvas"></canvas>
+
+  <!-- Contenedor Toasts -->
+  <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2.5 max-w-sm w-full pointer-events-none"></div>
+
+  <!-- CABECERA SUPERIOR DE LA PANTALLA PRINCIPAL -->
+  <header class="border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-xl sticky top-0 z-40 px-4 sm:px-8 py-3">
+    <div class="max-w-[1700px] mx-auto flex flex-wrap items-center justify-between gap-4">
+      
+      <!-- Logo y Título -->
+      <div class="flex items-center gap-3.5">
+        <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-emerald-500 via-teal-500 to-indigo-500 p-0.5 shadow-lg shadow-emerald-500/25">
+          <div class="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center">
+            <span class="text-2xl">🎯</span>
+          </div>
+        </div>
+        <div>
+          <div class="flex items-center gap-2 flex-wrap">
+            <h1 class="text-xl sm:text-2xl font-black tracking-tight bg-gradient-to-r from-emerald-400 via-teal-300 to-indigo-300 bg-clip-text text-transparent">
+              PUNTO Y FAMA
+            </h1>
+            <span id="host-room-badge" class="px-2.5 py-0.5 rounded-full text-[11px] font-mono font-extrabold bg-indigo-600/30 border border-indigo-500/50 text-indigo-300 uppercase tracking-wider">
+              SALA: PRINCIPAL
+            </span>
+            <button id="btn-change-room" type="button" title="Crear o cambiar de sala privada" class="text-[10px] font-mono px-2 py-0.5 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-all">
+              🔑 Cambiar Sala
+            </button>
+          </div>
+          <p class="text-xs text-slate-400 font-mono">PANTALLA DE JUEGO MULTIJUGADOR SIMULTÁNEO</p>
+        </div>
+      </div>
+
+      <!-- Centro: Código Secreto Oculto & Estado de Ronda -->
+      <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2 px-4 py-2 rounded-2xl bg-slate-900/90 border border-slate-700/80 shadow-inner">
+          <span class="text-xs text-slate-400 font-mono uppercase tracking-wider">CÓDIGO:</span>
+          <div id="host-secret-slots" class="flex items-center gap-1.5 font-mono text-lg font-black tracking-widest text-emerald-400">
+            <span class="w-7 h-9 rounded-lg bg-slate-950 border border-slate-700 flex items-center justify-center">?</span>
+            <span class="w-7 h-9 rounded-lg bg-slate-950 border border-slate-700 flex items-center justify-center">?</span>
+            <span class="w-7 h-9 rounded-lg bg-slate-950 border border-slate-700 flex items-center justify-center">?</span>
+            <span class="w-7 h-9 rounded-lg bg-slate-950 border border-slate-700 flex items-center justify-center">?</span>
+          </div>
+          <button id="btn-peek-code" title="Ver código (solo anfitrión)" class="ml-1 p-1.5 rounded-lg text-slate-400 hover:text-white bg-slate-800/80 hover:bg-slate-700 transition-all text-xs">
+            👁️
+          </button>
+        </div>
+
+        <div id="round-status-pill" class="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-emerald-950/40 border border-emerald-500/40 text-emerald-300 font-mono text-xs font-bold shadow-sm">
+          <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
+          <span id="round-number-text">RONDA #1 EN CURSO</span>
+        </div>
+      </div>
+
+      <!-- Acciones de Control del Anfitrión -->
+      <div class="flex items-center gap-2">
+        <button id="btn-new-round" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs sm:text-sm flex items-center gap-1.5 shadow-lg shadow-emerald-950 transition-all">
+          <span>🚀 Nueva Ronda</span>
+        </button>
+
+        <button id="btn-toggle-duplicates" class="px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-300 hover:text-white text-xs font-mono transition-all" title="Alternar regla de cifras repetidas">
+          <span id="label-duplicates">Sin Repetir</span>
+        </button>
+
+        <button id="btn-reset-game" class="p-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-400 hover:text-rose-400 text-sm transition-all" title="Reiniciar toda la partida y puntajes">
+          🔄
+        </button>
+
+        <button id="btn-sound-toggle" class="p-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-300 hover:text-white text-sm transition-all" title="Sonido">
+          🔊
+        </button>
+
+        <button id="btn-fullscreen" class="p-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-300 hover:text-white text-sm transition-all" title="Pantalla Completa">
+          ⛶
+        </button>
+
+        <a href="index.html" class="px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-400 hover:text-white text-xs transition-all font-mono">
+          Volver
+        </a>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- BANNER DE UNIÓN RÁPIDA: QR CODE Y ENLACE PARA CELULARES -->
+  <section class="max-w-[1700px] mx-auto px-4 sm:px-8 mt-5 w-full">
+    <div class="p-4 sm:p-5 rounded-3xl bg-slate-900/70 border border-slate-800/80 glow-card flex flex-col md:flex-row items-center justify-between gap-5 relative overflow-hidden">
+      
+      <!-- Fondo decorativo neón -->
+      <div class="absolute -right-20 -bottom-20 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+      <!-- QR y Texto de Instrucción -->
+      <div class="flex flex-col sm:flex-row items-center gap-5 w-full md:w-auto text-center sm:text-left">
+        <!-- Contenedor QR con borde neón -->
+        <div class="relative p-2 rounded-2xl bg-slate-950 border-2 border-emerald-500/40 shadow-xl shadow-emerald-500/10 flex-shrink-0">
+          <img id="qr-code-img" src="" alt="Código QR para unirse" class="w-28 h-28 sm:w-32 sm:h-32 rounded-xl object-contain bg-slate-950" />
+          <div class="absolute -bottom-2 left-1/2 transform -translate-x-1/2 px-2 py-0.5 rounded-full bg-emerald-500 text-slate-950 font-black text-[9px] uppercase tracking-wider shadow">
+            Escanea
+          </div>
+        </div>
+
+        <div>
+          <div class="flex items-center justify-center sm:justify-start gap-2">
+            <span class="text-xl">📲</span>
+            <h2 class="text-lg sm:text-xl font-black text-white tracking-tight">
+              ¡Únete desde tu celular para competir!
+            </h2>
+          </div>
+          <p class="text-xs sm:text-sm text-slate-300 mt-1">
+            Escanea el código QR con la cámara o ingresa en tu navegador a:
+          </p>
+          <div class="mt-2 inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-950 border border-emerald-500/50">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+            <span id="join-url-text" class="font-mono text-sm sm:text-base font-extrabold text-emerald-400 select-all tracking-wider">
+              Cargando URL...
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Contador de Jugadores Conectados -->
+      <div class="flex items-center gap-4 border-t md:border-t-0 md:border-l border-slate-800 pt-3 md:pt-0 md:pl-6 w-full md:w-auto justify-center">
+        <div class="text-center md:text-right">
+          <span class="text-xs font-mono text-slate-400 uppercase tracking-widest block">Jugadores en Sala</span>
+          <div class="flex items-center justify-center md:justify-end gap-2 mt-0.5">
+            <span class="text-2xl">👥</span>
+            <span id="players-count-badge" class="text-3xl font-black font-mono text-indigo-400">0</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- BANNER OFICIAL DEL SISTEMA DE PUNTUACIÓN (REGLA SOLICITADA) -->
+  <section class="max-w-[1700px] mx-auto px-4 sm:px-8 mt-4 w-full">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+      
+      <!-- Regla Fama -->
+      <div class="p-3.5 rounded-2xl bg-emerald-950/30 border border-emerald-500/40 glow-fama flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <span class="text-3xl">👑</span>
+          <div>
+            <h3 class="font-extrabold text-emerald-300 text-sm tracking-wide">1 FAMA (Dígito y sitio exacto)</h3>
+            <p class="text-[11px] text-slate-300">Acierto directo de posición</p>
+          </div>
+        </div>
+        <div class="text-right">
+          <span class="font-mono font-black text-2xl text-emerald-400">+25</span>
+          <span class="text-[10px] text-emerald-300 block font-mono uppercase">Puntos</span>
+        </div>
+      </div>
+
+      <!-- Regla Punto -->
+      <div class="p-3.5 rounded-2xl bg-cyan-950/30 border border-cyan-500/40 glow-punto flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <span class="text-3xl">⚡</span>
+          <div>
+            <h3 class="font-extrabold text-cyan-300 text-sm tracking-wide">1 PUNTO (Dígito en otra posición)</h3>
+            <p class="text-[11px] text-slate-300">Número correcto, lugar diferente</p>
+          </div>
+        </div>
+        <div class="text-right">
+          <span class="font-mono font-black text-2xl text-cyan-300">+1</span>
+          <span class="text-[10px] text-cyan-300 block font-mono uppercase">Punto</span>
+        </div>
+      </div>
+
+      <!-- Regla Victoria 4 Famas -->
+      <div class="p-3.5 rounded-2xl bg-amber-950/30 border border-amber-500/40 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <span class="text-3xl">🏆</span>
+          <div>
+            <h3 class="font-extrabold text-amber-300 text-sm tracking-wide">4 FAMAS (Código Descifrado)</h3>
+            <p class="text-[11px] text-slate-300">¡Descubre el código y gana la ronda!</p>
+          </div>
+        </div>
+        <div class="text-right">
+          <span class="font-mono font-black text-2xl text-amber-400">100+</span>
+          <span class="text-[10px] text-amber-300 block font-mono uppercase">¡Victoria!</span>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ARENA PRINCIPAL: TABLERO DE POSICIONES + FEED EN VIVO (SOLO RESULTADOS) -->
+  <main class="max-w-[1700px] mx-auto px-4 sm:px-8 mt-5 flex-1 w-full grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+    <!-- COLUMNA IZQUIERDA: TABLERO DE POSICIONES / LEADERBOARD (COL 1-7) -->
+    <section class="lg:col-span-7 flex flex-col gap-4">
+      
+      <div class="p-5 sm:p-6 rounded-3xl bg-slate-900/70 border border-slate-800/80 glow-card flex-1 flex flex-col">
+        
+        <!-- Cabecera del Tablero -->
+        <div class="flex items-center justify-between border-b border-slate-800 pb-4 mb-4">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-xl">
+              🏆
+            </div>
+            <div>
+              <h2 class="text-lg sm:text-xl font-black text-white">Tablero de Jugadores</h2>
+              <p class="text-xs text-slate-400 font-mono">Clasificación en vivo por puntaje acumulado</p>
+            </div>
+          </div>
+          <span class="px-3 py-1 rounded-full text-xs font-mono font-bold bg-slate-800 text-indigo-300 border border-slate-700">
+            Fama: 25 pts | Punto: 1 pt
+          </span>
+        </div>
+
+        <!-- PODIO TOP 3 DESTACADO -->
+        <div id="podium-container" class="grid grid-cols-3 gap-3 mb-5">
+          <!-- Renderizado dinámicamente por host.js -->
+        </div>
+
+        <!-- LISTA GENERAL DE JUGADORES -->
+        <div class="relative flex-1 overflow-y-auto max-h-[520px] pr-1">
+          
+          <!-- Estado Vacío -->
+          <div id="leaderboard-empty-state" class="flex flex-col items-center justify-center text-center p-10 text-slate-500">
+            <div class="w-16 h-16 rounded-2xl bg-slate-800/50 flex items-center justify-center text-3xl mb-3 border border-slate-800">
+              👥
+            </div>
+            <p class="font-bold text-slate-300 text-base">Esperando a que los jugadores se unan</p>
+            <p class="text-xs text-slate-500 mt-1 max-w-sm">Escaneen el código QR arriba con sus celulares para registrar su nombre y empezar a jugar.</p>
+          </div>
+
+          <!-- Contenedor del listado de jugadores -->
+          <div id="leaderboard-table" class="flex flex-col gap-2.5">
+            <!-- Inyectado dinámicamente -->
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- COLUMNA DERECHA: FEED DE INTENTOS EN VIVO - SOLO RESULTADOS (COL 8-12) -->
+    <section class="lg:col-span-5 flex flex-col gap-4">
+      
+      <div class="p-5 sm:p-6 rounded-3xl bg-slate-900/70 border border-slate-800/80 glow-card flex-1 flex flex-col">
+        
+        <!-- Cabecera del Feed -->
+        <div class="flex items-center justify-between border-b border-slate-800 pb-4 mb-3">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-xl bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center text-xl">
+              📡
+            </div>
+            <div>
+              <h2 class="text-lg font-black text-white">Intentos en Pantalla</h2>
+              <p class="text-[11px] text-slate-400 font-mono">Solo resultados (Puntos y Famas)</p>
+            </div>
+          </div>
+          <span id="feed-counter-badge" class="px-2.5 py-1 rounded-full text-xs font-mono font-bold bg-slate-800 text-slate-300 border border-slate-700">
+            0 recibidos
+          </span>
+        </div>
+
+        <!-- AVISO DE PRIVACIDAD ESTRICTA (SEGÚN REQUERIMIENTO DEL USUARIO) -->
+        <div class="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800 mb-3 flex items-center gap-2.5 text-xs text-slate-400">
+          <span class="text-base flex-shrink-0">🔒</span>
+          <span>Por reglas de competencia, <strong>en pantalla solo aparece si hubo Fama o Punto</strong>. Las 4 cifras ingresadas permanecen secretas en el celular de cada jugador.</span>
+        </div>
+
+        <!-- LISTADO DINÁMICO DE RESULTADOS EN VIVO (ÚLTIMO ARRIBA) -->
+        <div class="relative flex-1 overflow-y-auto max-h-[520px] pr-1">
+          
+          <div id="feed-empty-state" class="flex flex-col items-center justify-center text-center p-10 text-slate-500">
+            <div class="w-16 h-16 rounded-2xl bg-slate-800/50 flex items-center justify-center text-3xl mb-3 border border-slate-800">
+              ⚡
+            </div>
+            <p class="font-bold text-slate-400">Aún no hay intentos enviados</p>
+            <p class="text-xs text-slate-500 mt-1 max-w-xs">Cuando un jugador envíe su número desde el celular, aquí se transmitirá su resultado al instante.</p>
+          </div>
+
+          <div id="live-feed-list" class="flex flex-col gap-2.5">
+            <!-- Inyectado dinámicamente por host.js -->
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- ========================================== -->
+  <!-- MODAL DE VICTORIA ROTUNDA (4 FAMAS LOGRADAS) -->
+  <!-- ========================================== -->
+  <div id="modal-round-winner" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4">
+    <div class="w-full max-w-lg p-6 sm:p-8 rounded-3xl bg-slate-900 border-2 border-emerald-500 glow-box-fama flex flex-col items-center text-center relative overflow-hidden animate-history-item">
+      
+      <div class="absolute -top-24 -left-24 w-48 h-48 bg-emerald-500/20 rounded-full blur-3xl pointer-events-none"></div>
+      <div class="absolute -bottom-24 -right-24 w-48 h-48 bg-amber-500/20 rounded-full blur-3xl pointer-events-none"></div>
+
+      <div class="text-6xl mb-3 animate-bounce">
+        🏆
+      </div>
+
+      <h3 class="text-3xl sm:text-4xl font-black bg-gradient-to-r from-emerald-400 via-amber-300 to-teal-300 bg-clip-text text-transparent">
+        ¡CÓDIGO DESCIFRADO!
+      </h3>
+      <p class="text-sm text-slate-300 mt-1">¡Ha obtenido las <span class="font-extrabold text-emerald-400">4 FAMAS</span> exactas!</p>
+
+      <!-- Tarjeta del Ganador -->
+      <div class="w-full my-5 p-5 rounded-2xl bg-slate-950/90 border border-slate-800 flex flex-col items-center gap-3">
+        <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-amber-500 to-emerald-500 p-0.5 shadow-lg shadow-amber-500/20">
+          <div class="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center text-3xl">
+            <span id="winner-modal-avatar">👑</span>
+          </div>
+        </div>
+
+        <h4 id="winner-modal-name" class="text-2xl font-black text-white">Nombre del Jugador</h4>
+        
+        <div class="flex items-center gap-2 mt-1">
+          <span class="text-xs font-mono text-slate-400 uppercase">CÓDIGO SECRETO REVELADO:</span>
+          <span id="winner-modal-secret" class="font-mono text-2xl font-black text-emerald-400 tracking-widest px-3 py-1 rounded-xl bg-slate-900 border border-emerald-500/40">
+            4821
+          </span>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 w-full mt-3 text-center">
+          <div class="p-3 rounded-xl bg-slate-900 border border-slate-800">
+            <span class="text-[11px] text-slate-400 block uppercase font-mono">Intentos</span>
+            <span id="winner-modal-attempts" class="text-2xl font-black font-mono text-indigo-400">5</span>
+          </div>
+          <div class="p-3 rounded-xl bg-slate-900 border border-slate-800">
+            <span class="text-[11px] text-slate-400 block uppercase font-mono">Puntos Totales</span>
+            <span id="winner-modal-score" class="text-2xl font-black font-mono text-emerald-400">127 pts</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Acciones de Siguiente Ronda -->
+      <div class="flex flex-col sm:flex-row items-center gap-3 w-full">
+        <button id="btn-modal-next-round" class="w-full py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-base shadow-lg shadow-emerald-950 transition-all flex items-center justify-center gap-2">
+          <span>🚀 Iniciar Siguiente Ronda</span>
+        </button>
+        <button id="btn-modal-close" class="w-full sm:w-auto px-5 py-3.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold transition-all">
+          Cerrar
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/soundEffects.js"></script>
+  <script src="js/host.js"></script>
+
+</body>
+</html>
