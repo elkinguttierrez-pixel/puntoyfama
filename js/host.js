@@ -29,6 +29,12 @@
   const winnerModalSecret = document.getElementById('winner-modal-secret');
   const winnerModalAttempts = document.getElementById('winner-modal-attempts');
   const winnerModalScore = document.getElementById('winner-modal-score');
+  const winnerModalTitle = document.getElementById('winner-modal-title');
+  const winnerModalSubtitle = document.getElementById('winner-modal-subtitle');
+  const winnerModalIcon = document.getElementById('winner-modal-icon');
+  const winnerModalMetricLabel = document.getElementById('winner-modal-metric-label');
+  const btnModalNextRoundText = document.getElementById('btn-modal-next-round-text');
+  const btnNewRoundLabel = document.getElementById('btn-new-round-label');
 
   const btnNewRound = document.getElementById('btn-new-round');
   const btnToggleDuplicates = document.getElementById('btn-toggle-duplicates');
@@ -226,26 +232,37 @@
 
     // Insignias de resultado
     let resultBadgesHtml = '';
-    if (entry.famas > 0) {
+    if (isWin) {
       resultBadgesHtml += `
         <span class="px-2.5 py-1 rounded-xl font-mono text-xs font-extrabold glow-fama flex items-center gap-1.5">
-          <span>👑</span> ${entry.famas} Fama${entry.famas > 1 ? 's' : ''} (+${entry.famas * 25} pts)
+          <span>👑</span> 4 Famas (+100 pts)
+        </span>
+        <span class="px-2.5 py-1 rounded-xl font-mono text-xs font-extrabold bg-amber-500/20 text-amber-300 border border-amber-500/50 flex items-center gap-1.5">
+          <span>🏆</span> +300 pts extras
         </span>
       `;
-    }
-    if (entry.puntos > 0) {
-      resultBadgesHtml += `
-        <span class="px-2.5 py-1 rounded-xl font-mono text-xs font-extrabold glow-punto flex items-center gap-1.5">
-          <span>⚡</span> ${entry.puntos} Punto${entry.puntos > 1 ? 's' : ''} (+${entry.puntos * 1} pt${entry.puntos > 1 ? 's' : ''})
-        </span>
-      `;
-    }
-    if (entry.famas === 0 && entry.puntos === 0) {
-      resultBadgesHtml += `
-        <span class="px-2 py-0.5 rounded-lg font-mono text-xs text-slate-400 bg-slate-900 border border-slate-800">
-          0 Famas, 0 Puntos (+0 pts)
-        </span>
-      `;
+    } else {
+      if (entry.famas > 0) {
+        resultBadgesHtml += `
+          <span class="px-2.5 py-1 rounded-xl font-mono text-xs font-extrabold glow-fama flex items-center gap-1.5">
+            <span>👑</span> ${entry.famas} Fama${entry.famas > 1 ? 's' : ''} (+${entry.famas * 25} pts)
+          </span>
+        `;
+      }
+      if (entry.puntos > 0) {
+        resultBadgesHtml += `
+          <span class="px-2.5 py-1 rounded-xl font-mono text-xs font-extrabold glow-punto flex items-center gap-1.5">
+            <span>⚡</span> ${entry.puntos} Punto${entry.puntos > 1 ? 's' : ''} (+${entry.puntos * 1} pt${entry.puntos > 1 ? 's' : ''})
+          </span>
+        `;
+      }
+      if (entry.famas === 0 && entry.puntos === 0) {
+        resultBadgesHtml += `
+          <span class="px-2 py-0.5 rounded-lg font-mono text-xs text-slate-400 bg-slate-900 border border-slate-800">
+            0 Famas, 0 Puntos (+0 pts)
+          </span>
+        `;
+      }
     }
 
     card.innerHTML = `
@@ -268,7 +285,7 @@
         <span class="font-mono text-xs font-black ${entry.pointsGained > 0 ? 'text-emerald-400' : 'text-slate-500'}">
           +${entry.pointsGained} pts
         </span>
-        ${isWin ? '<span class="block text-[9px] font-mono text-amber-300 font-bold uppercase animate-pulse">¡Ganador!</span>' : ''}
+        ${isWin ? '<span class="block text-[9px] font-mono text-amber-300 font-bold uppercase animate-pulse">¡Ganador (+300 pts)!</span>' : ''}
       </div>
     `;
 
@@ -345,7 +362,25 @@
             currentRoomId = data.roomId;
             updateRoomBadge();
           }
-          if (roundNumberText) roundNumberText.textContent = `RONDA #${data.roundNumber} EN CURSO`;
+          const maxRounds = data.maxRounds || 3;
+          if (roundNumberText) {
+            if (data.isMatchOver) {
+              roundNumberText.textContent = `PARTIDA FINALIZADA (${maxRounds} DE ${maxRounds})`;
+            } else if (data.roundNumber > 0) {
+              roundNumberText.textContent = `JUEGO #${data.roundNumber} DE ${maxRounds} EN CURSO`;
+            } else {
+              roundNumberText.textContent = `ESPERANDO INICIO (3 JUEGOS)`;
+            }
+          }
+          if (btnNewRoundLabel) {
+            if (data.isMatchOver) {
+              btnNewRoundLabel.textContent = '🎮 Nueva Partida (3 Juegos)';
+            } else if (data.roundNumber > 0 && data.roundNumber < maxRounds) {
+              btnNewRoundLabel.textContent = `🚀 Siguiente Juego (${data.roundNumber + 1}/${maxRounds})`;
+            } else {
+              btnNewRoundLabel.textContent = '🚀 Iniciar Juego';
+            }
+          }
           if (labelDuplicates) labelDuplicates.textContent = data.allowDuplicates ? 'Con Repetición' : 'Sin Repetir';
           currentSecretCode = data.secretCode;
           renderLeaderboard(data.leaderboard);
@@ -357,7 +392,15 @@
         }
 
         if (type === 'round:started') {
-          if (roundNumberText) roundNumberText.textContent = `RONDA #${data.roundNumber} EN CURSO`;
+          const maxRounds = data.maxRounds || 3;
+          if (roundNumberText) roundNumberText.textContent = `JUEGO #${data.roundNumber} DE ${maxRounds} EN CURSO`;
+          if (btnNewRoundLabel) {
+            if (data.roundNumber < maxRounds) {
+              btnNewRoundLabel.textContent = `🚀 Siguiente Juego (${data.roundNumber + 1}/${maxRounds})`;
+            } else {
+              btnNewRoundLabel.textContent = `🏁 Último Juego (${maxRounds}/${maxRounds})`;
+            }
+          }
           if (modalRoundWinner) modalRoundWinner.classList.add('hidden');
           codeIsPeeked = false;
           currentSecretCode = null;
@@ -366,7 +409,7 @@
           if (feedEmptyState) feedEmptyState.classList.remove('hidden');
           feedCount = 0;
           if (feedCounterBadge) feedCounterBadge.textContent = '0 recibidos';
-          showToast(`¡Comenzó la Ronda #${data.roundNumber}!`, 'info');
+          showToast(`¡Comenzó el Juego #${data.roundNumber} de ${maxRounds}!`, 'info');
         }
 
         if (type === 'host:player_joined') {
@@ -392,12 +435,44 @@
           renderSecretSlots(data.secretCode, true);
           renderLeaderboard(data.leaderboard);
 
+          const maxRounds = data.maxRounds || 3;
+          const isMatchOver = data.isMatchOver;
+
           if (modalRoundWinner) {
-            winnerModalAvatar.textContent = data.winner.avatar;
-            winnerModalName.textContent = data.winner.name;
-            winnerModalSecret.textContent = data.secretCode;
-            winnerModalAttempts.textContent = data.winner.attemptsCount;
-            winnerModalScore.textContent = `${data.winner.score} pts`;
+            if (isMatchOver) {
+              const champ = data.matchWinner || data.winner;
+              if (winnerModalIcon) winnerModalIcon.textContent = '👑';
+              if (winnerModalTitle) winnerModalTitle.textContent = '¡FIN DE LA PARTIDA!';
+              if (winnerModalSubtitle) {
+                winnerModalSubtitle.innerHTML = `¡Partida de <strong>${maxRounds} juegos</strong> completada!<br><span class="text-amber-300 font-bold">¡El ganador es el jugador con más puntos acumulados!</span>`;
+              }
+              if (winnerModalAvatar) winnerModalAvatar.textContent = champ.avatar;
+              if (winnerModalName) winnerModalName.textContent = `¡${champ.name} es el Gran Campeón!`;
+              if (winnerModalSecret) winnerModalSecret.textContent = data.secretCode;
+              if (winnerModalMetricLabel) winnerModalMetricLabel.textContent = 'Puesto';
+              if (winnerModalAttempts) winnerModalAttempts.textContent = '🥇 1º';
+              if (winnerModalScore) winnerModalScore.textContent = `${champ.score} pts`;
+              if (btnModalNextRoundText) btnModalNextRoundText.textContent = '🎮 Iniciar Nueva Partida (3 Juegos)';
+              if (btnNewRoundLabel) btnNewRoundLabel.textContent = '🎮 Nueva Partida (3 Juegos)';
+              if (roundNumberText) roundNumberText.textContent = `PARTIDA FINALIZADA (${maxRounds} DE ${maxRounds})`;
+              showToast(`🏆 ¡FIN DE LA PARTIDA! ${champ.name} gana con ${champ.score} puntos!`, 'success');
+            } else {
+              const nextRound = data.roundNumber + 1;
+              if (winnerModalIcon) winnerModalIcon.textContent = '🏆';
+              if (winnerModalTitle) winnerModalTitle.textContent = `¡JUEGO #${data.roundNumber} DE ${maxRounds} DESCIFRADO!`;
+              if (winnerModalSubtitle) {
+                winnerModalSubtitle.innerHTML = `¡Ha obtenido las <span class="font-extrabold text-emerald-400">4 FAMAS</span> (+300 pts extras de bonificación)!`;
+              }
+              if (winnerModalAvatar) winnerModalAvatar.textContent = data.winner.avatar;
+              if (winnerModalName) winnerModalName.textContent = data.winner.name;
+              if (winnerModalSecret) winnerModalSecret.textContent = data.secretCode;
+              if (winnerModalMetricLabel) winnerModalMetricLabel.textContent = 'Intentos';
+              if (winnerModalAttempts) winnerModalAttempts.textContent = data.winner.attemptsCount;
+              if (winnerModalScore) winnerModalScore.textContent = `${data.winner.score} pts`;
+              if (btnModalNextRoundText) btnModalNextRoundText.textContent = `🚀 Iniciar Juego #${nextRound} de ${maxRounds}`;
+              if (btnNewRoundLabel) btnNewRoundLabel.textContent = `🚀 Siguiente Juego (${nextRound}/${maxRounds})`;
+              showToast(`🏆 ¡${data.winner.name} descifró el código del Juego #${data.roundNumber}! (+300 pts extras)`, 'success');
+            }
             modalRoundWinner.classList.remove('hidden');
           }
 
@@ -405,7 +480,6 @@
           if (window.PuntoYFamaAudio) {
             window.PuntoYFamaAudio.playVictoryFanfare();
           }
-          showToast(`🏆 ¡${data.winner.name} descifró las 4 cifras!`, 'success');
         }
 
         if (type === 'host:secret_code_peek') {

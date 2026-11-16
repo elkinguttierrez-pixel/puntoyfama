@@ -30,6 +30,10 @@ class TestRoom {
   constructor(secretCode) {
     this.secretCode = secretCode;
     this.status = 'active';
+    this.roundNumber = 1;
+    this.maxRounds = 3;
+    this.isMatchOver = false;
+    this.matchWinner = null;
     this.players = new Map();
     this.feed = [];
     this.winner = null;
@@ -46,16 +50,31 @@ class TestRoom {
     });
   }
 
+  startNewRound(newSecret) {
+    this.roundNumber++;
+    this.secretCode = newSecret;
+    this.status = 'active';
+    this.winner = null;
+    this.feed = [];
+    for (const player of this.players.values()) {
+      player.attemptsCount = 0;
+      player.bestAttempt = { famas: 0, puntos: 0 };
+    }
+  }
+
   guess(playerId, guessStr) {
     const player = this.players.get(playerId);
     const evalRes = gameEngine.evaluateGuess(this.secretCode, guessStr);
     const famas = evalRes.famas;
     const puntos = evalRes.puntos;
+    const isWin = famas === 4;
 
     // REGLA SOLICITADA:
     // 1 Fama = 25 puntos
     // 1 Punto = 1 punto
-    const pointsGained = (famas * 25) + (puntos * 1);
+    // Al ganar con 4 Famas = +300 puntos extras de bonificación
+    const winBonus = isWin ? 300 : 0;
+    const pointsGained = (famas * 25) + (puntos * 1) + winBonus;
     player.score += pointsGained;
     player.attemptsCount++;
 
@@ -69,20 +88,27 @@ class TestRoom {
       playerName: player.name,
       famas,
       puntos,
+      winBonus,
       pointsGained,
-      isWin: famas === 4
+      isWin
     };
     this.feed.unshift(publicItem);
 
-    if (famas === 4) {
+    if (isWin) {
       this.status = 'ended';
       this.winner = player;
+
+      if (this.roundNumber >= this.maxRounds) {
+        this.isMatchOver = true;
+        this.matchWinner = this.getLeaderboard()[0];
+      }
     }
 
     return {
       guess: guessStr, // Privado para el jugador
       famas,
       puntos,
+      winBonus,
       pointsGained,
       publicItem
     };
@@ -120,15 +146,16 @@ test('Cálculo de puntaje: 0 Famas y 3 Puntos = 3 puntos', () => {
   assert.strictEqual(room.players.get('p1').score, 3);
 });
 
-// TEST 3: 4 Famas = 100 puntos y Victoria
-test('Cálculo de puntaje: 4 Famas = 100 puntos y Victoria inmediata', () => {
+// TEST 3: 4 Famas = 400 puntos (100 base + 300 extras) y Victoria
+test('Cálculo de puntaje: ganar con 4 Famas da 300 puntos extras (Total: 400 pts)', () => {
   const room = new TestRoom('4821');
   room.addPlayer('p1', 'Ganador', '⚡');
   
   const res = room.guess('p1', '4821');
   assert.strictEqual(res.famas, 4);
   assert.strictEqual(res.puntos, 0);
-  assert.strictEqual(res.pointsGained, 100); // 4*25
+  assert.strictEqual(res.winBonus, 300);
+  assert.strictEqual(res.pointsGained, 400); // 4*25 + 300
   assert.strictEqual(room.status, 'ended');
   assert.strictEqual(room.winner.name, 'Ganador');
 });
@@ -164,6 +191,44 @@ test('Tablero clasifica jugadores correctamente según puntaje acumulado', () =>
   assert.strictEqual(lb[0].score, 50);
   assert.strictEqual(lb[1].name, 'Jugador Bajo');
   assert.strictEqual(lb[1].score, 1);
+});
+
+// TEST 6: Toda partida tiene 3 juegos y gana el jugador con más puntos
+test('Toda partida tiene 3 juegos y gana el jugador con más puntos acumulados', () => {
+  const room = new TestRoom('1234');
+  room.addPlayer('p1', 'Jugador Consistente', '👑');
+  room.addPlayer('p2', 'Jugador Rápido', '⚡');
+
+  // JUEGO 1:
+  // p1 adivina 2 famas y 1 punto = 51 pts
+  room.guess('p1', '1256'); // 2F, 0P -> 50 pts
+  // p2 descifra el código: 4 famas -> 400 pts (+300 extras)
+  room.guess('p2', '1234'); // 4F -> 400 pts
+  assert.strictEqual(room.roundNumber, 1);
+  assert.strictEqual(room.isMatchOver, false);
+
+  // JUEGO 2:
+  room.startNewRound('5678');
+  assert.strictEqual(room.roundNumber, 2);
+  // p1 descifra el código: 4 famas -> 400 pts. Total acumulado p1: 50 + 400 = 450 pts
+  room.guess('p1', '5678');
+  assert.strictEqual(room.players.get('p1').score, 450);
+  assert.strictEqual(room.isMatchOver, false);
+
+  // JUEGO 3:
+  room.startNewRound('9012');
+  assert.strictEqual(room.roundNumber, 3);
+  // p1 suma 3 famas = 75 pts. Total acumulado p1: 450 + 75 = 525 pts
+  room.guess('p1', '9015');
+  // p2 descifra el código: 4 famas -> 400 pts. Total acumulado p2: 400 + 400 = 800 pts
+  room.guess('p2', '9012');
+  assert.strictEqual(room.players.get('p2').score, 800);
+
+  // Al finalizar el juego 3, la partida termina
+  assert.strictEqual(room.isMatchOver, true);
+  // Y gana el jugador con más puntos en la partida
+  assert.strictEqual(room.matchWinner.name, 'Jugador Rápido');
+  assert.strictEqual(room.matchWinner.score, 800);
 });
 
 console.log(`\n=========================================`);

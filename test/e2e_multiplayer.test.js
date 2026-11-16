@@ -81,7 +81,7 @@ setTimeout(async () => {
 
     console.log('  ✅ Carlos recibió resultado privado en su celular:', p1Result);
     assert.strictEqual(p1Result.guess, '1234');
-    assert.strictEqual(p1Result.pointsGained, (p1Result.famas * 25) + (p1Result.puntos * 1));
+    assert.strictEqual(p1Result.pointsGained, (p1Result.famas * 25) + (p1Result.puntos * 1) + (p1Result.isWin ? 300 : 0));
 
     // 5. Sofia envía un intento desde su celular
     p2Ws.send(JSON.stringify({
@@ -101,7 +101,7 @@ setTimeout(async () => {
 
     console.log('  ✅ Sofia recibió resultado privado en su celular:', p2Result);
     assert.strictEqual(p2Result.guess, '5678');
-    assert.strictEqual(p2Result.pointsGained, (p2Result.famas * 25) + (p2Result.puntos * 1));
+    assert.strictEqual(p2Result.pointsGained, (p2Result.famas * 25) + (p2Result.puntos * 1) + (p2Result.isWin ? 300 : 0));
 
     await new Promise((r) => setTimeout(r, 500));
 

@@ -93,14 +93,14 @@
 
         <div id="round-status-pill" class="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-emerald-950/40 border border-emerald-500/40 text-emerald-300 font-mono text-xs font-bold shadow-sm">
           <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
-          <span id="round-number-text">RONDA #1 EN CURSO</span>
+          <span id="round-number-text">JUEGO #1 DE 3 EN CURSO</span>
         </div>
       </div>
 
       <!-- Acciones de Control del Anfitrión -->
       <div class="flex items-center gap-2">
         <button id="btn-new-round" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs sm:text-sm flex items-center gap-1.5 shadow-lg shadow-emerald-950 transition-all">
-          <span>🚀 Nueva Ronda</span>
+          <span id="btn-new-round-label">🚀 Siguiente Juego</span>
         </button>
 
         <button id="btn-toggle-duplicates" class="px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-300 hover:text-white text-xs font-mono transition-all" title="Alternar regla de cifras repetidas">
@@ -216,13 +216,13 @@
         <div class="flex items-center gap-3">
           <span class="text-3xl">🏆</span>
           <div>
-            <h3 class="font-extrabold text-amber-300 text-sm tracking-wide">4 FAMAS (Código Descifrado)</h3>
-            <p class="text-[11px] text-slate-300">¡Descubre el código y gana la ronda!</p>
+            <h3 class="font-extrabold text-amber-300 text-sm tracking-wide">4 FAMAS (¡Victoria del Juego!)</h3>
+            <p class="text-[11px] text-slate-300">Descifra el código: 100 base + 300 extras = +400 pts</p>
           </div>
         </div>
         <div class="text-right">
-          <span class="font-mono font-black text-2xl text-amber-400">100+</span>
-          <span class="text-[10px] text-amber-300 block font-mono uppercase">¡Victoria!</span>
+          <span class="font-mono font-black text-2xl text-amber-400">+400</span>
+          <span class="text-[10px] text-amber-300 block font-mono uppercase font-bold">+300 Extras</span>
         </div>
       </div>
 
@@ -248,8 +248,8 @@
               <p class="text-xs text-slate-400 font-mono">Clasificación en vivo por puntaje acumulado</p>
             </div>
           </div>
-          <span class="px-3 py-1 rounded-full text-xs font-mono font-bold bg-slate-800 text-indigo-300 border border-slate-700">
-            Fama: 25 pts | Punto: 1 pt
+          <span class="px-3 py-1 rounded-full text-xs font-mono font-bold bg-slate-800 text-amber-300 border border-slate-700">
+            Partida a 3 Juegos | Gana quien sume más puntos
           </span>
         </div>
 
@@ -340,14 +340,14 @@
       <div class="absolute -top-24 -left-24 w-48 h-48 bg-emerald-500/20 rounded-full blur-3xl pointer-events-none"></div>
       <div class="absolute -bottom-24 -right-24 w-48 h-48 bg-amber-500/20 rounded-full blur-3xl pointer-events-none"></div>
 
-      <div class="text-6xl mb-3 animate-bounce">
+      <div id="winner-modal-icon" class="text-6xl mb-3 animate-bounce">
         🏆
       </div>
 
-      <h3 class="text-3xl sm:text-4xl font-black bg-gradient-to-r from-emerald-400 via-amber-300 to-teal-300 bg-clip-text text-transparent">
+      <h3 id="winner-modal-title" class="text-3xl sm:text-4xl font-black bg-gradient-to-r from-emerald-400 via-amber-300 to-teal-300 bg-clip-text text-transparent">
         ¡CÓDIGO DESCIFRADO!
       </h3>
-      <p class="text-sm text-slate-300 mt-1">¡Ha obtenido las <span class="font-extrabold text-emerald-400">4 FAMAS</span> exactas!</p>
+      <p id="winner-modal-subtitle" class="text-sm text-slate-300 mt-1">¡Ha obtenido las <span class="font-extrabold text-emerald-400">4 FAMAS</span> (+300 pts extras)!</p>
 
       <!-- Tarjeta del Ganador -->
       <div class="w-full my-5 p-5 rounded-2xl bg-slate-950/90 border border-slate-800 flex flex-col items-center gap-3">
@@ -368,7 +368,7 @@
 
         <div class="grid grid-cols-2 gap-3 w-full mt-3 text-center">
           <div class="p-3 rounded-xl bg-slate-900 border border-slate-800">
-            <span class="text-[11px] text-slate-400 block uppercase font-mono">Intentos</span>
+            <span id="winner-modal-metric-label" class="text-[11px] text-slate-400 block uppercase font-mono">Intentos</span>
             <span id="winner-modal-attempts" class="text-2xl font-black font-mono text-indigo-400">5</span>
           </div>
           <div class="p-3 rounded-xl bg-slate-900 border border-slate-800">
@@ -382,7 +382,7 @@
       <!-- Acciones de Siguiente Ronda -->
       <div class="flex flex-col sm:flex-row items-center gap-3 w-full">
         <button id="btn-modal-next-round" class="w-full py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-base shadow-lg shadow-emerald-950 transition-all flex items-center justify-center gap-2">
-          <span>🚀 Iniciar Siguiente Ronda</span>
+          <span id="btn-modal-next-round-text">🚀 Iniciar Siguiente Juego</span>
         </button>
         <button id="btn-modal-close" class="w-full sm:w-auto px-5 py-3.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold transition-all">
           Cerrar

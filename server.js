@@ -89,6 +89,9 @@ class MultiplayerRoom {
     this.status = 'waiting';
     this.secretCode = '';
     this.roundNumber = 0;
+    this.maxRounds = 3; // Toda partida tendrá 3 juegos/rondas
+    this.isMatchOver = false;
+    this.matchWinner = null;
     this.players = new Map();
     this.feed = [];
     this.winner = null;
@@ -127,6 +130,17 @@ class MultiplayerRoom {
 
   startNewRound() {
     this.lastActivity = Date.now();
+
+    // Si la partida anterior finalizó (3 juegos completados), reiniciar puntajes para la nueva partida
+    if (this.isMatchOver || this.roundNumber >= this.maxRounds) {
+      this.roundNumber = 0;
+      this.isMatchOver = false;
+      this.matchWinner = null;
+      for (const player of this.players.values()) {
+        player.score = 0;
+      }
+    }
+
     this.roundNumber++;
     this.secretCode = gameEngine.generateSecretCode(this.codeLength, this.allowDuplicates);
     this.status = 'active';
@@ -142,13 +156,15 @@ class MultiplayerRoom {
       player.bestAttempt = { famas: 0, puntos: 0 };
     }
 
-    console.log(`[Sala: ${this.roomId}][Ronda #${this.roundNumber}] Código secreto: ${this.secretCode} (Duplicados: ${this.allowDuplicates})`);
+    console.log(`[Sala: ${this.roomId}][Juego #${this.roundNumber} de ${this.maxRounds}] Código secreto: ${this.secretCode} (Duplicados: ${this.allowDuplicates})`);
   }
 
   resetAll() {
     this.lastActivity = Date.now();
     this.status = 'waiting';
     this.roundNumber = 0;
+    this.isMatchOver = false;
+    this.matchWinner = null;
     this.secretCode = '';
     this.winner = null;
     this.feed = [];
@@ -202,11 +218,15 @@ class MultiplayerRoom {
     this.playerLastGuessTime.set(playerId, now);
 
     if (this.status !== 'active') {
+      let errorMsg = 'La partida aún no ha comenzado. El anfitrión debe iniciarla.';
+      if (this.isMatchOver) {
+        errorMsg = '¡La partida de 3 juegos ha finalizado! Gana el jugador con más puntos. El anfitrión puede iniciar una nueva partida.';
+      } else if (this.status === 'ended') {
+        errorMsg = `El Juego #${this.roundNumber} ha finalizado. Espera al inicio del siguiente juego.`;
+      }
       return {
         success: false,
-        error: this.status === 'ended'
-          ? 'La ronda actual ya ha finalizado. Espera la siguiente ronda.'
-          : 'La partida aún no ha comenzado. El anfitrión debe iniciarla.'
+        error: errorMsg
       };
     }
 
@@ -224,11 +244,14 @@ class MultiplayerRoom {
     const evalRes = gameEngine.evaluateGuess(this.secretCode, guess);
     const famas = evalRes.famas;
     const puntos = evalRes.puntos;
+    const isWin = famas === this.codeLength;
 
     // SISTEMA DE PUNTAJE SOLICITADO:
     // 1 Fama = 25 puntos
     // 1 Punto = 1 punto
-    const pointsGained = (famas * 25) + (puntos * 1);
+    // Al ganar con 4 Famas = 300 puntos extras de bonificación (+400 pts en total)
+    const winBonus = isWin ? 300 : 0;
+    const pointsGained = (famas * 25) + (puntos * 1) + winBonus;
 
     player.score += pointsGained;
     player.roundScore += pointsGained;
@@ -244,6 +267,7 @@ class MultiplayerRoom {
       guess: guess,
       famas,
       puntos,
+      winBonus,
       pointsGained,
       timestamp: Date.now()
     };
@@ -251,7 +275,6 @@ class MultiplayerRoom {
 
     // Registro público para la pantalla central (Host / TV)
     // REGLA FUNDAMENTAL: EN PANTALLA SOLO APARECE EL RESULTADO PUNTO O FAMA (NUNCA EL NÚMERO)
-    const isWin = famas === this.codeLength;
     const publicFeedEntry = {
       id: 'feed_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
       playerId: player.id,
@@ -259,6 +282,7 @@ class MultiplayerRoom {
       playerAvatar: player.avatar,
       famas,
       puntos,
+      winBonus,
       pointsGained,
       isWin,
       timestamp: Date.now()
@@ -275,9 +299,17 @@ class MultiplayerRoom {
         name: player.name,
         avatar: player.avatar,
         score: player.score,
+        roundScore: player.roundScore,
         attemptsCount: player.attemptsCount,
         durationSeconds: Math.floor((this.endTime - this.startTime) / 1000)
       };
+
+      // Verificar si se completaron los 3 juegos de la partida
+      if (this.roundNumber >= this.maxRounds) {
+        this.isMatchOver = true;
+        const sortedLeaderboard = this.getLeaderboard();
+        this.matchWinner = sortedLeaderboard[0] || player;
+      }
     }
 
     return {
@@ -285,11 +317,14 @@ class MultiplayerRoom {
       guess,
       famas,
       puntos,
+      winBonus,
       pointsGained,
       totalScore: player.score,
       roundScore: player.roundScore,
       attemptsCount: player.attemptsCount,
       isWin,
+      isMatchOver: this.isMatchOver,
+      matchWinner: this.matchWinner,
       publicFeedEntry
     };
   }
@@ -318,6 +353,9 @@ class MultiplayerRoom {
       roomId: this.roomId,
       status: this.status,
       roundNumber: this.roundNumber,
+      maxRounds: this.maxRounds,
+      isMatchOver: this.isMatchOver,
+      matchWinner: this.matchWinner,
       codeLength: this.codeLength,
       allowDuplicates: this.allowDuplicates,
       secretCode: this.status === 'ended' ? this.secretCode : null,
@@ -558,6 +596,8 @@ wss.on('connection', (ws, req) => {
           data: {
             roomId: room.roomId,
             roundNumber: room.roundNumber,
+            maxRounds: room.maxRounds,
+            isMatchOver: room.isMatchOver,
             codeLength: room.codeLength,
             allowDuplicates: room.allowDuplicates
           }
@@ -614,6 +654,9 @@ wss.on('connection', (ws, req) => {
             player,
             roomStatus: room.status,
             roundNumber: room.roundNumber,
+            maxRounds: room.maxRounds,
+            isMatchOver: room.isMatchOver,
+            matchWinner: room.matchWinner,
             allowDuplicates: room.allowDuplicates,
             leaderboard: room.getLeaderboard()
           }
@@ -651,11 +694,14 @@ wss.on('connection', (ws, req) => {
             guess: result.guess,
             famas: result.famas,
             puntos: result.puntos,
+            winBonus: result.winBonus,
             pointsGained: result.pointsGained,
             totalScore: result.totalScore,
             roundScore: result.roundScore,
             attemptsCount: result.attemptsCount,
-            isWin: result.isWin
+            isWin: result.isWin,
+            isMatchOver: result.isMatchOver,
+            matchWinner: result.matchWinner
           }
         }));
 
@@ -683,7 +729,11 @@ wss.on('connection', (ws, req) => {
             data: {
               winner: room.winner,
               secretCode: room.secretCode,
-              leaderboard: room.getLeaderboard()
+              leaderboard: room.getLeaderboard(),
+              roundNumber: room.roundNumber,
+              maxRounds: room.maxRounds,
+              isMatchOver: room.isMatchOver,
+              matchWinner: room.matchWinner
             }
           });
         }
@@ -724,7 +774,8 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log(`🖥️  Pantalla Principal (Host / TV): http://localhost:${PORT}/host`);
   console.log(`📲  Acceso Móvil LAN:               http://${LOCAL_IP}:${PORT}/play${publicUrlEnv}`);
   console.log(`🌐  Red Local IP:                   ${LOCAL_IP}`);
-  console.log(`⚙️  Reglas de Puntaje:              1 Fama = 25 pts | 1 Punto = 1 pt`);
+  console.log(`⚙️  Reglas de Puntaje:              1 Fama = 25 pts | 1 Punto = 1 pt | 4 Famas = +300 pts extras`);
+  console.log(`🎮  Formato de Partida:             3 Juegos por partida (Gana el jugador con más puntos)`);
   console.log(`🔒  Privacidad en Pantalla:         Solo resultados Fama/Punto (Sin dígitos)`);
   console.log(`🚀  Salas Dinámicas:                Soportadas (?room=SALA)`);
   console.log(`======================================================\n`);

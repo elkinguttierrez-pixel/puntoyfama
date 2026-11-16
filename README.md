@@ -11,7 +11,8 @@ Diseñada con soporte para **múltiples jugadores simultáneos desde sus teléfo
 ### 👑 Reglas de Puntuación Oficiales
 - **1 Fama = +25 Puntos:** Dígito y posición coinciden de forma exacta.
 - **1 Punto = +1 Punto:** Dígito presente en el código secreto pero en otra posición.
-- **4 Famas = ¡Victoria de Ronda!** El primer jugador en descifrar las 4 cifras exactas gana la ronda (+100 puntos) y revela el código secreto para toda la sala.
+- **4 Famas = ¡Victoria de Juego! (+300 Puntos Extras):** El primer jugador en descifrar las 4 cifras exactas gana el juego sumando los 100 puntos de las 4 famas + **300 puntos extras** de bonificación (**+400 puntos en total**) y revela el código secreto para toda la sala.
+- **🎮 Partida oficial a 3 Juegos:** Toda partida se compone de **3 juegos** (rondas). Los puntos se acumulan a lo largo de los 3 juegos. Al finalizar el 3er juego, **gana la partida el jugador con más puntos acumulados**.
 
 ### 🔒 Privacidad Estricta en Pantalla Pública
 - En la pantalla compartida (Host / TV / Proyector) **solo aparece si el intento obtuvo Puntos o Famas** (ejemplo: `👑 2 Famas | ⚡ 1 Punto (+51 pts)`).
@@ -65,7 +66,8 @@ El servidor detectará automáticamente la dirección IP local de tu red Wi-Fi e
 🖥️  Pantalla Principal (Host / TV): http://localhost:3000/host
 📲  Acceso desde Celulares:        http://192.168.X.X:3000/play
 🌐  Red Local IP:                  192.168.X.X
-⚙️  Reglas de Puntaje:             1 Fama = 25 pts | 1 Punto = 1 pt
+⚙️  Reglas de Puntaje:             1 Fama = 25 pts | 1 Punto = 1 pt | 4 Famas = +300 pts extras
+🎮  Formato de Partida:            3 Juegos por partida (Gana el jugador con más puntos)
 🔒  Privacidad en Pantalla:        Solo resultados Fama/Punto (Sin dígitos)
 ======================================================
 ```

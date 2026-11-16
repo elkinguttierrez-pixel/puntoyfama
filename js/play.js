@@ -229,18 +229,20 @@
       myHistoryList.innerHTML = '';
     }
 
+    const isWin = famas === 4;
     const item = document.createElement('div');
-    item.className = 'p-2 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-between gap-2 text-xs font-mono animate-history-item';
+    item.className = `p-2 rounded-xl ${isWin ? 'bg-amber-950/40 border border-amber-500/60' : 'bg-slate-950/80 border border-slate-800'} flex items-center justify-between gap-2 text-xs font-mono animate-history-item`;
 
     item.innerHTML = `
       <div class="flex items-center gap-2">
         <span class="text-slate-500 font-bold">#${attemptsInRound}</span>
         <span class="font-bold text-white tracking-widest text-sm bg-slate-900 px-2 py-0.5 rounded-lg border border-slate-700">${guess}</span>
       </div>
-      <div class="flex items-center gap-1.5">
+      <div class="flex items-center gap-1.5 flex-wrap justify-end">
         <span class="text-emerald-400 font-bold">👑 ${famas}F</span>
         <span class="text-cyan-300 font-bold">⚡ ${puntos}P</span>
-        <span class="text-slate-400 text-[11px] font-bold">+${pointsGained}pts</span>
+        ${isWin ? '<span class="text-amber-300 font-bold text-[10px] bg-amber-500/20 px-1 py-0.5 rounded border border-amber-500/40">🏆 +300 EXT</span>' : ''}
+        <span class="${isWin ? 'text-amber-400' : 'text-slate-400'} text-[11px] font-bold">+${pointsGained}pts</span>
       </div>
     `;
 
@@ -287,8 +289,13 @@
           }
           isRoundActive = data.roomStatus === 'active';
           allowDuplicates = data.allowDuplicates;
+          const maxRounds = data.maxRounds || 3;
           if (roundStatusBadge) {
-            roundStatusBadge.textContent = isRoundActive ? `Ronda #${data.roundNumber} Activa` : 'Esperando ronda...';
+            if (data.isMatchOver) {
+              roundStatusBadge.textContent = `Partida Finalizada (${maxRounds}/${maxRounds})`;
+            } else {
+              roundStatusBadge.textContent = isRoundActive ? `Juego #${data.roundNumber} de ${maxRounds} Activo` : 'Esperando juego...';
+            }
           }
           if (viewJoin) viewJoin.classList.add('hidden');
           if (viewGame) viewGame.classList.remove('hidden');
@@ -314,27 +321,42 @@
 
           // Actualizar recuadro de último resultado
           if (lastResultBox) {
-            lastResultBox.innerHTML = `
-              <div class="flex flex-col items-center gap-1 animate-history-item w-full">
-                <div class="flex items-center justify-between w-full text-xs">
-                  <span class="text-slate-400 font-mono">Tu intento: <strong class="text-white text-sm tracking-wider">${data.guess}</strong></span>
-                  <span class="font-mono font-bold text-emerald-400">+${data.pointsGained} pts</span>
+            if (data.isWin) {
+              lastResultBox.innerHTML = `
+                <div class="flex flex-col items-center gap-1 animate-history-item w-full">
+                  <div class="flex items-center justify-between w-full text-xs">
+                    <span class="text-slate-400 font-mono">Tu intento: <strong class="text-white text-sm tracking-wider">${data.guess}</strong></span>
+                    <span class="font-mono font-bold text-amber-400">+${data.pointsGained} pts</span>
+                  </div>
+                  <div class="flex items-center gap-2 mt-0.5 flex-wrap justify-center">
+                    <span class="text-xs font-bold font-mono text-emerald-400 flex items-center gap-1">👑 4 Famas (+100 pts)</span>
+                    <span class="text-xs font-bold font-mono text-amber-300 flex items-center gap-1 bg-amber-500/20 px-2 py-0.5 rounded-lg border border-amber-500/40">🏆 +300 pts extras</span>
+                  </div>
                 </div>
-                <div class="flex items-center gap-3 mt-0.5">
-                  <span class="text-xs font-bold font-mono text-emerald-400 flex items-center gap-1">👑 ${data.famas} Fama${data.famas !== 1 ? 's' : ''} (+${data.famas * 25} pts)</span>
-                  <span class="text-xs font-bold font-mono text-cyan-300 flex items-center gap-1">⚡ ${data.puntos} Punto${data.puntos !== 1 ? 's' : ''} (+${data.puntos * 1} pt)</span>
+              `;
+            } else {
+              lastResultBox.innerHTML = `
+                <div class="flex flex-col items-center gap-1 animate-history-item w-full">
+                  <div class="flex items-center justify-between w-full text-xs">
+                    <span class="text-slate-400 font-mono">Tu intento: <strong class="text-white text-sm tracking-wider">${data.guess}</strong></span>
+                    <span class="font-mono font-bold text-emerald-400">+${data.pointsGained} pts</span>
+                  </div>
+                  <div class="flex items-center gap-3 mt-0.5">
+                    <span class="text-xs font-bold font-mono text-emerald-400 flex items-center gap-1">👑 ${data.famas} Fama${data.famas !== 1 ? 's' : ''} (+${data.famas * 25} pts)</span>
+                    <span class="text-xs font-bold font-mono text-cyan-300 flex items-center gap-1">⚡ ${data.puntos} Punto${data.puntos !== 1 ? 's' : ''} (+${data.puntos * 1} pt)</span>
+                  </div>
                 </div>
-              </div>
-            `;
+              `;
+            }
           }
 
           prependMyAttempt(data.guess, data.famas, data.puntos, data.pointsGained);
 
           if (data.isWin) {
             vibrate([100, 50, 100, 50, 200]);
-            if (typeof confetti === 'function') confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+            if (typeof confetti === 'function') confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
             if (window.PuntoYFamaAudio) window.PuntoYFamaAudio.playVictoryFanfare();
-            showToast('🎉 ¡FELICITACIONES! ¡HAS DESCUBIERTO EL CÓDIGO!', 'success');
+            showToast('🎉 ¡HAS DESCIFRADO EL CÓDIGO! ¡+300 PUNTOS EXTRAS!', 'success');
           } else if (data.famas > 0) {
             if (window.PuntoYFamaAudio) window.PuntoYFamaAudio.playFamaSound();
           } else if (data.puntos > 0) {
@@ -348,22 +370,36 @@
           isRoundActive = true;
           allowDuplicates = data.allowDuplicates;
           attemptsInRound = 0;
+          const maxRounds = data.maxRounds || 3;
           if (myAttemptsCount) myAttemptsCount.textContent = '0 intentos';
           if (myHistoryList) myHistoryList.innerHTML = '<span class="text-center text-slate-500 text-xs py-4">Tus intentos aparecerán aquí.</span>';
           if (lastResultBox) lastResultBox.innerHTML = '<span class="text-xs text-slate-500 font-mono">Ingresa un número de 4 cifras y presiona Enviar</span>';
-          if (roundStatusBadge) roundStatusBadge.textContent = `Ronda #${data.roundNumber} Activa`;
+          if (roundStatusBadge) roundStatusBadge.textContent = `Juego #${data.roundNumber} de ${maxRounds} Activo`;
           clearDigits();
-          showToast(`¡Comenzó la Ronda #${data.roundNumber}!`, 'info');
+          showToast(`¡Comenzó el Juego #${data.roundNumber} de ${maxRounds}!`, 'info');
         }
 
         if (type === 'round:winner') {
           isRoundActive = false;
-          if (roundStatusBadge) roundStatusBadge.textContent = 'Ronda Finalizada';
-          const isMe = data.winner.id === playerId;
-          if (isMe) {
-            showToast('🏆 ¡ERES EL GANADOR DE LA RONDA!', 'success');
+          const maxRounds = data.maxRounds || 3;
+          if (data.isMatchOver) {
+            if (roundStatusBadge) roundStatusBadge.textContent = `Partida Finalizada (${maxRounds}/${maxRounds})`;
+            const isMeChamp = data.matchWinner && data.matchWinner.id === playerId;
+            if (isMeChamp) {
+              vibrate([100, 50, 100, 50, 200]);
+              if (typeof confetti === 'function') confetti({ particleCount: 150, spread: 90, origin: { y: 0.5 } });
+              showToast(`🏆 ¡FELICITACIONES! ¡ERES EL GRAN CAMPEÓN DE LA PARTIDA CON ${data.matchWinner.score} PUNTOS TRAS LOS 3 JUEGOS!`, 'success');
+            } else {
+              showToast(`🏆 ¡FIN DE LA PARTIDA! El campeón con más puntos es ${data.matchWinner ? data.matchWinner.name : 'N/A'} (${data.matchWinner ? data.matchWinner.score : 0} pts en 3 juegos).`, 'info');
+            }
           } else {
-            showToast(`🏆 ¡${data.winner.name} descifró el código secreto (${data.secretCode})!`, 'info');
+            if (roundStatusBadge) roundStatusBadge.textContent = `Juego #${data.roundNumber} Finalizado`;
+            const isMe = data.winner.id === playerId;
+            if (isMe) {
+              showToast(`🏆 ¡GANASTE EL JUEGO #${data.roundNumber}! (+300 pts extras)`, 'success');
+            } else {
+              showToast(`🏆 ¡${data.winner.name} descifró el código del Juego #${data.roundNumber} (${data.secretCode}) y sumó +300 pts extras!`, 'info');
+            }
           }
           updateLeaderboardRank(data.leaderboard);
         }
