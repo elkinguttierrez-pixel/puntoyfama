@@ -80,10 +80,17 @@
 
       <!-- Acciones Rápidas: Sonido, Usuario, Reglas, Salón de Fama, Sala TV -->
       <div class="flex items-center gap-2 sm:gap-3">
-        <!-- Botón Sala TV / Multijugador Móvil -->
+        <!-- Botón Celular / Control Remoto -->
+        <a href="play.html" title="Entrar desde el teléfono celular como jugador" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 border border-emerald-500/50 hover:bg-slate-800 text-emerald-300 font-extrabold text-xs sm:text-sm transition-all shadow">
+          <span>📲</span>
+          <span class="hidden sm:inline">Tu Celular</span>
+          <span class="sm:hidden">Celular</span>
+        </a>
+
+        <!-- Botón Sala TV / Multijugador Pantalla -->
         <a href="host.html" title="Abrir Pantalla Central para jugar con múltiples celulares" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-indigo-600 hover:opacity-95 text-white font-extrabold text-xs sm:text-sm shadow-lg shadow-emerald-950 transition-all border border-emerald-400/40 animate-pulse">
           <span>📺</span>
-          <span class="hidden sm:inline">Sala TV / Celulares</span>
+          <span class="hidden sm:inline">Sala TV / Host</span>
           <span class="sm:hidden">Sala TV</span>
         </a>
 
@@ -119,6 +126,22 @@
 
     </div>
   </header>
+
+  <!-- BANNER DE ACCESO DIRECTO MÓVIL EN LA NUBE -->
+  <div id="mobile-join-banner" class="max-w-7xl mx-auto px-4 sm:px-6 mt-4 w-full">
+    <a href="play.html" class="p-3.5 rounded-2xl bg-gradient-to-r from-emerald-950/80 via-slate-900 to-indigo-950/80 border border-emerald-500/40 flex items-center justify-between gap-3 text-xs sm:text-sm hover:border-emerald-400 transition-all shadow-lg">
+      <div class="flex items-center gap-2.5">
+        <span class="text-xl">📲</span>
+        <div>
+          <strong class="text-white block">¿Estás jugando desde tu teléfono celular?</strong>
+          <span class="text-slate-400 text-xs">Toca aquí para abrir tu control remoto táctil y unirte a la partida en vivo</span>
+        </div>
+      </div>
+      <span class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs flex-shrink-0">
+        Entrar a Jugar &rarr;
+      </span>
+    </a>
+  </div>
 
   <!-- CONTENIDO PRINCIPAL -->
   <main class="max-w-7xl mx-auto px-4 sm:px-6 mt-6 flex-1 w-full grid grid-cols-1 lg:grid-cols-12 gap-6">

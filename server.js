@@ -55,26 +55,39 @@ const LOCAL_IP = getLocalIpAddress();
 
 /**
  * Determina dinámicamente la URL base pública según el entorno:
- * 1. Variable de entorno PUBLIC_URL si está definida (ej: https://mi-app.onrender.com)
- * 2. Encabezados de proxy x-forwarded-host / host de la petición entrante
- * 3. IP local para pruebas en LAN Wi-Fi
+ * 1. Origen real enviado por el navegador cliente (clientOrigin)
+ * 2. Variables de entorno comunes en la nube (RENDER_EXTERNAL_URL, PUBLIC_URL, RAILWAY_STATIC_URL)
+ * 3. Encabezados de proxy x-forwarded-proto / x-forwarded-host
+ * 4. IP local para pruebas en LAN Wi-Fi
  */
-function getBaseUrl(req) {
-  if (process.env.PUBLIC_URL) {
-    return process.env.PUBLIC_URL.replace(/\/+$/, '');
+function getBaseUrl(req, clientOrigin) {
+  // 1. Si el navegador cliente nos envió su origen exacto (ej: https://mi-app.onrender.com)
+  if (clientOrigin && typeof clientOrigin === 'string' && clientOrigin.startsWith('http')) {
+    return clientOrigin.replace(/\/+$/, '');
   }
 
+  // 2. Variables de entorno de nube
+  const envUrl = process.env.PUBLIC_URL || process.env.RENDER_EXTERNAL_URL || process.env.RAILWAY_STATIC_URL;
+  if (envUrl) {
+    const formatted = envUrl.startsWith('http') ? envUrl : `https://${envUrl}`;
+    return formatted.replace(/\/+$/, '');
+  }
+
+  // 3. Encabezados de proxy inverso
   if (req && req.headers) {
-    const forwardedProto = req.headers['x-forwarded-proto'];
+    const rawProto = req.headers['x-forwarded-proto'] || '';
+    const forwardedProto = rawProto.split(',')[0].trim();
     const forwardedHost = req.headers['x-forwarded-host'];
     const host = forwardedHost || req.headers.host;
 
     if (host && !host.startsWith('localhost') && !host.startsWith('127.0.0.1')) {
-      const proto = forwardedProto || (req.socket && req.socket.encrypted ? 'https' : 'http');
+      const isCloudDomain = host.includes('onrender.com') || host.includes('railway.app') || host.includes('loca.lt') || host.includes('ngrok-free.app');
+      const proto = forwardedProto || (req.socket && req.socket.encrypted ? 'https' : (isCloudDomain ? 'https' : 'http'));
       return `${proto}://${host}`;
     }
   }
 
+  // 4. IP Local LAN
   return `http://${LOCAL_IP}:${PORT}`;
 }
 
@@ -442,8 +455,13 @@ const server = http.createServer(async (req, res) => {
   if (safeUrl === '/healthz' || safeUrl === '/api/health') {
     res.writeHead(200, {
       'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*'
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS'
     });
+    if (req.method === 'HEAD') {
+      res.end();
+      return;
+    }
     res.end(JSON.stringify({ status: 'ok', timestamp: Date.now(), roomsActive: roomManager.rooms.size }));
     return;
   }
@@ -452,9 +470,10 @@ const server = http.createServer(async (req, res) => {
   if (safeUrl === '/api/info') {
     try {
       const rawRoomId = parsedUrl.searchParams.get('room') || 'default';
+      const clientOrigin = parsedUrl.searchParams.get('clientOrigin') || parsedUrl.searchParams.get('origin');
       const room = roomManager.getOrCreate(rawRoomId);
 
-      const baseUrl = getBaseUrl(req);
+      const baseUrl = getBaseUrl(req, clientOrigin);
       const isCustomRoom = room.roomId !== 'DEFAULT' && room.roomId !== 'default';
       const playUrl = isCustomRoom
         ? `${baseUrl}/play?room=${encodeURIComponent(room.roomId)}`
@@ -569,9 +588,17 @@ wss.on('connection', (ws, req) => {
   let isHost = false;
 
   ws.on('message', (raw) => {
+    ws.isAlive = true;
     try {
       const data = JSON.parse(raw.toString());
       const type = data.type;
+
+      // Heartbeat a nivel de aplicación (para proxies que no reenvían ping RFC 6455)
+      if (type === 'ping') {
+        ws.send(JSON.stringify({ type: 'pong', timestamp: Date.now() }));
+        return;
+      }
+
       const targetRoomId = data.roomId || boundRoom.roomId || 'default';
       const room = roomManager.getOrCreate(targetRoomId);
       boundRoom = room;

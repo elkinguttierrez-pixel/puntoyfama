@@ -249,6 +249,24 @@
     myHistoryList.prepend(item);
   }
 
+  let playerPingInterval = null;
+
+  function startPlayerHeartbeat() {
+    stopPlayerHeartbeat();
+    playerPingInterval = setInterval(() => {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'ping' }));
+      }
+    }, 20000);
+  }
+
+  function stopPlayerHeartbeat() {
+    if (playerPingInterval) {
+      clearInterval(playerPingInterval);
+      playerPingInterval = null;
+    }
+  }
+
   // Conectar WebSocket
   function connectWebSocket() {
     const isFile = location.protocol === 'file:' || !location.host;
@@ -266,6 +284,7 @@
 
     ws.onopen = () => {
       console.log('✅ Celular conectado al servidor');
+      startPlayerHeartbeat();
       if (playerName) {
         ws.send(JSON.stringify({
           type: 'player:join',
@@ -281,6 +300,8 @@
       try {
         const msg = JSON.parse(event.data);
         const { type, data } = msg;
+
+        if (type === 'pong') return; // Heartbeat ack
 
         if (type === 'player:joined') {
           if (data.roomId) {
@@ -414,8 +435,9 @@
     };
 
     ws.onclose = () => {
+      stopPlayerHeartbeat();
       console.warn('Conexión perdida. Reconectando...');
-      setTimeout(connectWebSocket, 2000);
+      setTimeout(connectWebSocket, 1500);
     };
   }
 
@@ -459,10 +481,14 @@
       if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({
           type: 'player:join',
+          roomId: currentRoomId,
           playerId,
           name: playerName,
           avatar: playerAvatar
         }));
+      } else {
+        showToast('Conectando a la sala en la nube, por favor espera un momento...', 'info');
+        connectWebSocket();
       }
     });
   }

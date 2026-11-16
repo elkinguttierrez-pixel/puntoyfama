@@ -69,11 +69,18 @@
     try {
       const isFile = location.protocol === 'file:' || !location.host;
       const apiBase = isFile ? 'http://localhost:3000' : '';
+      const clientOrigin = isFile ? 'http://localhost:3000' : window.location.origin;
       const roomQuery = currentRoomId && currentRoomId !== 'DEFAULT' && currentRoomId !== 'default'
-        ? `?room=${encodeURIComponent(currentRoomId)}`
+        ? `&room=${encodeURIComponent(currentRoomId)}`
         : '';
 
-      const res = await fetch(`${apiBase}/api/info${roomQuery}`);
+      // Fallback inicial inmediato mientras carga la API
+      if (joinUrlText && !isFile) {
+        const isCustom = currentRoomId && currentRoomId !== 'DEFAULT' && currentRoomId !== 'default';
+        joinUrlText.textContent = `${window.location.origin}/play${isCustom ? `?room=${encodeURIComponent(currentRoomId)}` : ''}`;
+      }
+
+      const res = await fetch(`${apiBase}/api/info?clientOrigin=${encodeURIComponent(clientOrigin)}${roomQuery}`);
       if (res.ok) {
         const data = await res.json();
         if (data.qrDataUrl && qrCodeImg) {
@@ -328,6 +335,24 @@
     });
   }
 
+  let hostPingInterval = null;
+
+  function startHostHeartbeat() {
+    stopHostHeartbeat();
+    hostPingInterval = setInterval(() => {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'ping' }));
+      }
+    }, 20000);
+  }
+
+  function stopHostHeartbeat() {
+    if (hostPingInterval) {
+      clearInterval(hostPingInterval);
+      hostPingInterval = null;
+    }
+  }
+
   // CONEXIÓN WEBSOCKETS
   function connectWebSocket() {
     const isFile = location.protocol === 'file:' || !location.host;
@@ -345,6 +370,7 @@
 
     ws.onopen = () => {
       console.log('✅ Host conectado al servidor WebSocket');
+      startHostHeartbeat();
       ws.send(JSON.stringify({
         type: 'host:register',
         roomId: currentRoomId
@@ -356,6 +382,8 @@
       try {
         const msg = JSON.parse(event.data);
         const { type, data } = msg;
+
+        if (type === 'pong') return; // Heartbeat ack
 
         if (type === 'host:state') {
           if (data.roomId) {
@@ -499,6 +527,7 @@
     };
 
     ws.onclose = () => {
+      stopHostHeartbeat();
       console.warn('⚠️ Conexión WS perdida. Reintentando en 2 segundos...');
       setTimeout(connectWebSocket, 2000);
     };

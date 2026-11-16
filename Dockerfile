@@ -7,8 +7,8 @@ WORKDIR /app
 # Copiar archivos de dependencias
 COPY package*.json ./
 
-# Instalar únicamente dependencias de producción
-RUN npm install --omit=dev --no-audit --no-fund
+# Instalar dependencias
+RUN npm install --no-audit --no-fund
 
 # Copiar el código fuente de la aplicación
 COPY . .
@@ -22,7 +22,7 @@ EXPOSE 3000
 
 # Health check para orquestadores Docker / Cloud
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/healthz || exit 1
+  CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:3000/healthz || exit 1
 
 # Comando de inicio del servidor
 CMD ["node", "server.js"]
