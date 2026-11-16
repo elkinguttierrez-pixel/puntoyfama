@@ -126,9 +126,79 @@
 }
 
 /* Efecto de fondo estrellado / sutil gradiente cósmico */
+html {
+  height: 100%;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 body {
   background: radial-gradient(circle at 50% 0%, #1e1b4b 0%, #0f172a 45%, #020617 100%);
   min-height: 100vh;
+  min-height: -webkit-fill-available;
+  min-height: 100dvh;
+  overscroll-behavior-y: none;
+  -webkit-tap-highlight-color: transparent;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+}
+
+/* Evitar zoom automático indeseado en Safari iOS al enfocar campos de texto */
+input, select, textarea {
+  font-size: 16px !important;
+}
+
+/* Optimizaciones táctiles para celulares de todas las marcas */
+.keypad-btn {
+  transition: transform 0.08s ease, filter 0.08s ease;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatar-option,
+button {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Adaptación responsiva para celulares compactos (iPhone SE, Galaxy A, pantallas < 680px altura) */
+@media (max-height: 680px) {
+  .keypad-btn {
+    min-height: 2.75rem !important;
+    padding-top: 0.4rem !important;
+    padding-bottom: 0.4rem !important;
+    font-size: 1.25rem !important;
+  }
+  #mobile-digit-slots .digit-slot,
+  #mobile-digit-slots [data-slot] {
+    height: 3.1rem !important;
+    width: 2.8rem !important;
+    font-size: 1.35rem !important;
+  }
+}
+
+/* Celulares muy angostos (< 360px de ancho) */
+@media (max-width: 360px) {
+  #mobile-digit-slots {
+    gap: 0.4rem !important;
+  }
+  #mobile-digit-slots .digit-slot,
+  #mobile-digit-slots [data-slot] {
+    width: 2.6rem !important;
+    height: 3rem !important;
+    font-size: 1.2rem !important;
+  }
 }
 
 /* Badges con gradiente */

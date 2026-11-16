@@ -231,10 +231,55 @@ test('Toda partida tiene 3 juegos y gana el jugador con más puntos acumulados',
   assert.strictEqual(room.matchWinner.score, 800);
 });
 
+// TEST 7: Expulsión de todos los jugadores al finalizar la partida para iniciar una nueva
+test('kickAllPlayers: saca a todos los jugadores, notifica a los sockets y reinicia la sala', () => {
+  const { MultiplayerRoom } = require('../server.js');
+  const room = new MultiplayerRoom('TEST_KICK');
+  room.startNewRound();
+  
+  // Agregar jugadores
+  room.addOrUpdatePlayer('p1', 'Jugador 1', '👑');
+  room.addOrUpdatePlayer('p2', 'Jugador 2', '🦊');
+  
+  // Simular sockets
+  const sentMessagesP1 = [];
+  const sentMessagesP2 = [];
+  const mockWs1 = { readyState: 1, send: (data) => sentMessagesP1.push(JSON.parse(data)) };
+  const mockWs2 = { readyState: 1, send: (data) => sentMessagesP2.push(JSON.parse(data)) };
+  room.playerSockets.set(mockWs1, 'p1');
+  room.playerSockets.set(mockWs2, 'p2');
+  
+  assert.strictEqual(room.players.size, 2);
+  assert.strictEqual(room.playerSockets.size, 2);
+  
+  // Simular fin de partida de 3 juegos
+  room.roundNumber = 3;
+  room.isMatchOver = true;
+  
+  // Ejecutar expulsión
+  room.kickAllPlayers('Partida terminada por el anfitrión');
+  
+  // Validar que la sala quedó completamente vacía y reiniciada
+  assert.strictEqual(room.players.size, 0, 'Todos los jugadores deben ser eliminados');
+  assert.strictEqual(room.playerSockets.size, 0, 'Todos los sockets deben ser desvinculados');
+  assert.strictEqual(room.status, 'waiting', 'La sala debe quedar en estado de espera');
+  assert.strictEqual(room.roundNumber, 0, 'El número de rondas debe reiniciar a 0');
+  assert.strictEqual(room.isMatchOver, false, 'isMatchOver debe ser false para la nueva partida');
+  assert.strictEqual(room.matchWinner, null, 'El ganador debe ser nulo');
+  
+  // Validar mensajes enviados a los celulares
+  assert.strictEqual(sentMessagesP1.length, 1);
+  assert.strictEqual(sentMessagesP1[0].type, 'player:kicked');
+  assert.strictEqual(sentMessagesP2.length, 1);
+  assert.strictEqual(sentMessagesP2[0].type, 'player:kicked');
+});
+
 console.log(`\n=========================================`);
 console.log(`Resumen: ${passedTests} de ${totalTests} pruebas pasadas.`);
 console.log(`=========================================\n`);
 
-if (passedTests !== totalTests) {
+if (passedTests === totalTests) {
+  process.exit(0);
+} else {
   process.exit(1);
 }

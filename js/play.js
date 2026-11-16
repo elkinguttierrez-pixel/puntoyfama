@@ -6,12 +6,38 @@
 (function () {
   'use strict';
 
-  // Almacenamiento local
+  // Almacenamiento local seguro con fallback a memoria (soporta modo incógnito, Safari privado y WebViews)
+  const memoryStore = new Map();
+  function safeGetStorage(key) {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        const val = localStorage.getItem(key);
+        if (val !== null) return JSON.parse(val);
+      }
+    } catch (e) {}
+    return memoryStore.get(key) || null;
+  }
+
+  function safeSetStorage(key, value) {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(key, JSON.stringify(value));
+      }
+    } catch (e) {}
+    memoryStore.set(key, value);
+  }
+
+  function safeRemoveStorage(key) {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.removeItem(key);
+      }
+    } catch (e) {}
+    memoryStore.delete(key);
+  }
+
   const STORAGE_KEY = 'punto_y_fama_mobile_user';
-  let savedProfile = null;
-  try {
-    savedProfile = JSON.parse(localStorage.getItem(STORAGE_KEY));
-  } catch (e) {}
+  let savedProfile = safeGetStorage(STORAGE_KEY);
 
   const urlParams = new URLSearchParams(window.location.search);
   let currentRoomId = (urlParams.get('room') || 'default').toUpperCase().slice(0, 16);
@@ -86,6 +112,8 @@
   const btnCloseDrawer = document.getElementById('btn-close-drawer');
   const drawerRankingList = document.getElementById('drawer-ranking-list');
   const toastContainer = document.getElementById('toast-container');
+  const joinKickedBanner = document.getElementById('join-kicked-banner');
+  const joinKickedText = document.getElementById('join-kicked-text');
 
   // Inicializar UI de Registro
   if (savedProfile) {
@@ -274,8 +302,41 @@
     }
   }
 
-  // Conectar WebSocket
+  let reconnectTimeout = null;
+  let reconnectAttempts = 0;
+
+  function scheduleReconnect() {
+    if (reconnectTimeout) return;
+    reconnectAttempts++;
+    const delay = Math.min(1000 * reconnectAttempts, 4000);
+    reconnectTimeout = setTimeout(() => {
+      reconnectTimeout = null;
+      connectWebSocket();
+    }, delay);
+  }
+
+  // Conectar WebSocket con soporte ultra-resistente para redes móviles
   function connectWebSocket() {
+    if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
+      return;
+    }
+
+    if (reconnectTimeout) {
+      clearTimeout(reconnectTimeout);
+      reconnectTimeout = null;
+    }
+
+    if (ws) {
+      try {
+        ws.onopen = null;
+        ws.onmessage = null;
+        ws.onerror = null;
+        ws.onclose = null;
+        ws.close();
+      } catch (e) {}
+      ws = null;
+    }
+
     const isFile = location.protocol === 'file:' || !location.host;
     const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
     const host = isFile ? 'localhost:3000' : location.host;
@@ -285,12 +346,13 @@
       ws = new WebSocket(wsUrl);
     } catch (err) {
       console.error('Error al inicializar WebSocket:', err);
-      showToast('No se pudo conectar al servidor.', 'error');
+      scheduleReconnect();
       return;
     }
 
     ws.onopen = () => {
       console.log('✅ Celular conectado al servidor');
+      reconnectAttempts = 0;
       startPlayerHeartbeat();
       if (playerName) {
         ws.send(JSON.stringify({
@@ -327,6 +389,7 @@
           }
           if (viewJoin) viewJoin.classList.add('hidden');
           if (viewGame) viewGame.classList.remove('hidden');
+          if (joinKickedBanner) joinKickedBanner.classList.add('hidden');
 
           if (playerAvatarBadge) playerAvatarBadge.textContent = data.player.avatar;
           if (playerNameLabel) playerNameLabel.textContent = data.player.name;
@@ -382,7 +445,9 @@
 
           if (data.isWin) {
             vibrate([100, 50, 100, 50, 200]);
-            if (typeof confetti === 'function') confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
+            if (typeof confetti === 'function') {
+              try { confetti({ particleCount: 60, spread: 70, origin: { y: 0.6 } }); } catch (e) {}
+            }
             if (window.PuntoYFamaAudio) window.PuntoYFamaAudio.playVictoryFanfare();
             showToast('🎉 ¡HAS DESCIFRADO EL CÓDIGO! ¡+300 PUNTOS EXTRAS!', 'success');
           } else if (data.famas > 0) {
@@ -415,7 +480,9 @@
             const isMeChamp = data.matchWinner && data.matchWinner.id === playerId;
             if (isMeChamp) {
               vibrate([100, 50, 100, 50, 200]);
-              if (typeof confetti === 'function') confetti({ particleCount: 150, spread: 90, origin: { y: 0.5 } });
+              if (typeof confetti === 'function') {
+                try { confetti({ particleCount: 75, spread: 80, origin: { y: 0.5 } }); } catch (e) {}
+              }
               showToast(`🏆 ¡FELICITACIONES! ¡ERES EL GRAN CAMPEÓN DE LA PARTIDA CON ${data.matchWinner.score} PUNTOS TRAS LOS 3 JUEGOS!`, 'success');
             } else {
               showToast(`🏆 ¡FIN DE LA PARTIDA! El campeón con más puntos es ${data.matchWinner ? data.matchWinner.name : 'N/A'} (${data.matchWinner ? data.matchWinner.score : 0} pts en 3 juegos).`, 'info');
@@ -436,6 +503,40 @@
           updateLeaderboardRank(data.leaderboard);
         }
 
+        if (type === 'player:kicked') {
+          // El anfitrión sacó a todos los jugadores para una nueva partida
+          isRoundActive = false;
+          playerName = '';
+          safeRemoveStorage(STORAGE_KEY);
+
+          // Generar un nuevo ID de jugador para la nueva partida
+          playerId = 'p_' + Math.random().toString(36).substr(2, 9);
+
+          // Reiniciar dígitos, intentos y casillas
+          currentDigits = [];
+          attemptsInRound = 0;
+          updateSlotsDisplay();
+
+          if (myAttemptsCount) myAttemptsCount.textContent = '0 intentos';
+          if (myHistoryList) myHistoryList.innerHTML = '<span class="text-center text-slate-500 text-xs py-4">Tus intentos aparecerán aquí con sus resultados.</span>';
+          if (lastResultBox) lastResultBox.innerHTML = '<span class="text-xs text-slate-500 font-mono">Ingresa un número de 4 cifras y presiona Enviar</span>';
+          if (playerScoreBadge) playerScoreBadge.textContent = '0 pts';
+
+          // Regresar a la vista de registro / unión
+          if (viewGame) viewGame.classList.add('hidden');
+          if (viewJoin) viewJoin.classList.remove('hidden');
+
+          if (joinKickedBanner) {
+            if (data && data.message && joinKickedText) {
+              joinKickedText.textContent = data.message;
+            }
+            joinKickedBanner.classList.remove('hidden');
+          }
+
+          vibrate([60, 80, 60]);
+          showToast(data?.message || 'La partida anterior ha finalizado. ¡Únete para la nueva partida!', 'warning');
+        }
+
       } catch (err) {
         console.error('Error procesando WS en móvil:', err);
       }
@@ -444,7 +545,11 @@
     ws.onclose = () => {
       stopPlayerHeartbeat();
       console.warn('Conexión perdida. Reconectando...');
-      setTimeout(connectWebSocket, 1500);
+      scheduleReconnect();
+    };
+
+    ws.onerror = () => {
+      // Dejar que onclose y scheduleReconnect gestionen la reconexión limpia sin excepciones
     };
   }
 
@@ -482,8 +587,9 @@
       if (!val) return;
 
       playerName = val;
+      if (joinKickedBanner) joinKickedBanner.classList.add('hidden');
       const profile = { id: playerId, name: playerName, avatar: playerAvatar };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
+      safeSetStorage(STORAGE_KEY, profile);
 
       if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({

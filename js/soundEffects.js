@@ -37,7 +37,10 @@
       }
     }
     if (audioCtx && audioCtx.state === 'suspended') {
-      audioCtx.resume();
+      try {
+        const p = audioCtx.resume();
+        if (p && typeof p.catch === 'function') p.catch(() => {});
+      } catch (e) {}
     }
     return audioCtx;
   }
@@ -197,6 +200,19 @@
         osc.stop(startTime + note.dur);
       });
     } catch (e) {}
+  }
+
+  // Desbloqueo proactivo en el primer toque para navegadores móviles (iOS WebKit / Android)
+  if (typeof document !== 'undefined') {
+    const unlockMobileAudio = function () {
+      getAudioContext();
+      document.removeEventListener('touchstart', unlockMobileAudio, true);
+      document.removeEventListener('touchend', unlockMobileAudio, true);
+      document.removeEventListener('click', unlockMobileAudio, true);
+    };
+    document.addEventListener('touchstart', unlockMobileAudio, { passive: true, capture: true });
+    document.addEventListener('touchend', unlockMobileAudio, { passive: true, capture: true });
+    document.addEventListener('click', unlockMobileAudio, { passive: true, capture: true });
   }
 
   return {

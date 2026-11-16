@@ -37,6 +37,9 @@
   const btnNewRoundLabel = document.getElementById('btn-new-round-label');
 
   const btnNewRound = document.getElementById('btn-new-round');
+  const btnKickAll = document.getElementById('btn-kick-all');
+  const btnKickAllLabel = document.getElementById('btn-kick-all-label');
+  const btnModalKickAll = document.getElementById('btn-modal-kick-all');
   const btnToggleDuplicates = document.getElementById('btn-toggle-duplicates');
   const btnResetGame = document.getElementById('btn-reset-game');
   const btnPeekCode = document.getElementById('btn-peek-code');
@@ -412,6 +415,13 @@
           if (labelDuplicates) labelDuplicates.textContent = data.allowDuplicates ? 'Con Repetición' : 'Sin Repetir';
           currentSecretCode = data.secretCode;
           renderLeaderboard(data.leaderboard);
+          if (data.isMatchOver) {
+            if (btnModalKickAll) btnModalKickAll.classList.remove('hidden');
+            if (btnKickAll) btnKickAll.classList.add('ring-2', 'ring-rose-500', 'animate-pulse');
+          } else {
+            if (btnModalKickAll) btnModalKickAll.classList.add('hidden');
+            if (btnKickAll) btnKickAll.classList.remove('ring-2', 'ring-rose-500', 'animate-pulse');
+          }
           if (data.feed && data.feed.length > 0) {
             liveFeedList.innerHTML = '';
             feedCount = 0;
@@ -429,6 +439,8 @@
               btnNewRoundLabel.textContent = `🏁 Último Juego (${maxRounds}/${maxRounds})`;
             }
           }
+          if (btnModalKickAll) btnModalKickAll.classList.add('hidden');
+          if (btnKickAll) btnKickAll.classList.remove('ring-2', 'ring-rose-500', 'animate-pulse');
           if (modalRoundWinner) modalRoundWinner.classList.add('hidden');
           codeIsPeeked = false;
           currentSecretCode = null;
@@ -480,12 +492,16 @@
               if (winnerModalMetricLabel) winnerModalMetricLabel.textContent = 'Puesto';
               if (winnerModalAttempts) winnerModalAttempts.textContent = '🥇 1º';
               if (winnerModalScore) winnerModalScore.textContent = `${champ.score} pts`;
-              if (btnModalNextRoundText) btnModalNextRoundText.textContent = '🎮 Iniciar Nueva Partida (3 Juegos)';
+              if (btnModalKickAll) btnModalKickAll.classList.remove('hidden');
+              if (btnKickAll) btnKickAll.classList.add('ring-2', 'ring-rose-500', 'animate-pulse');
+              if (btnModalNextRoundText) btnModalNextRoundText.textContent = '🎮 Nueva Partida (Conservar Jugadores)';
               if (btnNewRoundLabel) btnNewRoundLabel.textContent = '🎮 Nueva Partida (3 Juegos)';
               if (roundNumberText) roundNumberText.textContent = `PARTIDA FINALIZADA (${maxRounds} DE ${maxRounds})`;
               showToast(`🏆 ¡FIN DE LA PARTIDA! ${champ.name} gana con ${champ.score} puntos!`, 'success');
             } else {
               const nextRound = data.roundNumber + 1;
+              if (btnModalKickAll) btnModalKickAll.classList.add('hidden');
+              if (btnKickAll) btnKickAll.classList.remove('ring-2', 'ring-rose-500', 'animate-pulse');
               if (winnerModalIcon) winnerModalIcon.textContent = '🏆';
               if (winnerModalTitle) winnerModalTitle.textContent = `¡JUEGO #${data.roundNumber} DE ${maxRounds} DESCIFRADO!`;
               if (winnerModalSubtitle) {
@@ -538,6 +554,28 @@
   }
 
   // Event Listeners de Botones
+  function kickAllPlayers() {
+    const confirmMsg = '¿Deseas sacar a todos los jugadores de la sala para iniciar una nueva partida?';
+    if (confirm(confirmMsg)) {
+      if (modalRoundWinner) modalRoundWinner.classList.add('hidden');
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({
+          type: 'host:kick_all_players',
+          roomId: currentRoomId
+        }));
+        showToast('🚪 Has expulsado a todos los jugadores. La sala está lista para una nueva partida.', 'info');
+      }
+    }
+  }
+
+  if (btnKickAll) {
+    btnKickAll.onclick = kickAllPlayers;
+  }
+
+  if (btnModalKickAll) {
+    btnModalKickAll.onclick = kickAllPlayers;
+  }
+
   if (btnNewRound) {
     btnNewRound.onclick = () => {
       if (ws && ws.readyState === WebSocket.OPEN) {

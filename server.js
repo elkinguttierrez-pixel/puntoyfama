@@ -190,6 +190,43 @@ class MultiplayerRoom {
     }
   }
 
+  kickAllPlayers(reason = 'La partida de 3 juegos ha finalizado. El anfitrión ha reiniciado la sala para iniciar una nueva partida.') {
+    this.lastActivity = Date.now();
+
+    const kickPayload = JSON.stringify({
+      type: 'player:kicked',
+      data: {
+        message: reason,
+        isMatchOver: true,
+        roomId: this.roomId
+      }
+    });
+
+    for (const [wsClient] of this.playerSockets) {
+      if (wsClient.readyState === WebSocket.OPEN) {
+        try {
+          wsClient.send(kickPayload);
+        } catch (e) {}
+      }
+    }
+
+    this.players.clear();
+    this.playerSockets.clear();
+    this.playerLastGuessTime.clear();
+
+    this.status = 'waiting';
+    this.roundNumber = 0;
+    this.isMatchOver = false;
+    this.matchWinner = null;
+    this.secretCode = '';
+    this.winner = null;
+    this.feed = [];
+    this.startTime = null;
+    this.endTime = null;
+
+    console.log(`[Sala: ${this.roomId}] Todos los jugadores fueron retirados de la sala para iniciar una nueva partida.`);
+  }
+
   addOrUpdatePlayer(id, name, avatar) {
     this.lastActivity = Date.now();
     const cleanName = (name || '').replace(/<[^>]*>?/gm, '').trim().slice(0, 15) || 'Jugador';
@@ -646,6 +683,15 @@ wss.on('connection', (ws, req) => {
         return;
       }
 
+      if (type === 'host:kick_all_players') {
+        room.kickAllPlayers(data.reason);
+        room.broadcastToHosts({
+          type: 'host:state',
+          data: room.getHostState()
+        });
+        return;
+      }
+
       if (type === 'host:toggle_duplicates') {
         room.allowDuplicates = !room.allowDuplicates;
         room.broadcastToHosts({
@@ -822,3 +868,5 @@ function gracefulShutdown(signal) {
 }
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+module.exports = { server, roomManager, MultiplayerRoom };

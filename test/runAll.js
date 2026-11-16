@@ -9,7 +9,8 @@ const testFiles = [
   'test/userManager.test.js',
   'test/multiplayer.test.js',
   'test/e2e_multiplayer.test.js',
-  'test/rooms.test.js'
+  'test/rooms.test.js',
+  'test/kick_all_players.test.js'
 ];
 
 console.log('======================================================');

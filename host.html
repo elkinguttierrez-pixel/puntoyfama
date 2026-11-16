@@ -103,6 +103,11 @@
           <span id="btn-new-round-label">🚀 Siguiente Juego</span>
         </button>
 
+        <button id="btn-kick-all" class="px-3.5 py-2 rounded-xl bg-rose-950/70 border border-rose-600/60 hover:bg-rose-900/80 text-rose-300 hover:text-white font-bold text-xs sm:text-sm transition-all flex items-center gap-1.5 shadow-sm" title="Sacar a todos los jugadores de la sala para iniciar una nueva partida">
+          <span>🚪</span>
+          <span id="btn-kick-all-label">Sacar Jugadores</span>
+        </button>
+
         <button id="btn-toggle-duplicates" class="px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-300 hover:text-white text-xs font-mono transition-all" title="Alternar regla de cifras repetidas">
           <span id="label-duplicates">Sin Repetir</span>
         </button>
@@ -379,14 +384,21 @@
 
       </div>
 
-      <!-- Acciones de Siguiente Ronda -->
-      <div class="flex flex-col sm:flex-row items-center gap-3 w-full">
-        <button id="btn-modal-next-round" class="w-full py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-base shadow-lg shadow-emerald-950 transition-all flex items-center justify-center gap-2">
-          <span id="btn-modal-next-round-text">🚀 Iniciar Siguiente Juego</span>
+      <!-- Acciones de Siguiente Ronda / Nueva Partida -->
+      <div class="flex flex-col gap-3 w-full">
+        <!-- Botón para sacar a todos los jugadores al finalizar la partida de 3 juegos -->
+        <button id="btn-modal-kick-all" class="hidden w-full py-3.5 rounded-xl bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white font-black text-base shadow-lg shadow-rose-950 transition-all flex items-center justify-center gap-2">
+          <span>🚪 Sacar a Todos los Jugadores (Nueva Partida)</span>
         </button>
-        <button id="btn-modal-close" class="w-full sm:w-auto px-5 py-3.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold transition-all">
-          Cerrar
-        </button>
+
+        <div class="flex flex-col sm:flex-row items-center gap-3 w-full">
+          <button id="btn-modal-next-round" class="w-full py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-base shadow-lg shadow-emerald-950 transition-all flex items-center justify-center gap-2">
+            <span id="btn-modal-next-round-text">🚀 Iniciar Siguiente Juego</span>
+          </button>
+          <button id="btn-modal-close" class="w-full sm:w-auto px-5 py-3.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold transition-all">
+            Cerrar
+          </button>
+        </div>
       </div>
 
     </div>
