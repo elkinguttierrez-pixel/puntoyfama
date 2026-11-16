@@ -536,14 +536,15 @@ const server = http.createServer(async (req, res) => {
     const ext = path.extname(filePath).toLowerCase();
     const contentType = MIME_TYPES[ext] || 'application/octet-stream';
 
-    // Encabezados de caché optimizados para producción
-    const cacheHeader = ext === '.html'
-      ? 'no-cache, no-store, must-revalidate'
+    // Encabezados de caché optimizados para producción (HTML y JS frescos sin caché obsoleto en móviles)
+    const cacheHeader = (ext === '.html' || ext === '.js')
+      ? 'no-cache, no-store, must-revalidate, max-age=0'
       : 'public, max-age=86400';
 
     res.writeHead(200, {
       'Content-Type': contentType,
-      'Cache-Control': cacheHeader
+      'Cache-Control': cacheHeader,
+      'Access-Control-Allow-Origin': '*'
     });
 
     const stream = fs.createReadStream(filePath);

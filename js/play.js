@@ -207,17 +207,24 @@
     }
 
     if (!ws || ws.readyState !== WebSocket.OPEN) {
-      showToast('Conectando con el servidor...', 'warning');
+      showToast('Reconectando con la sala, por favor espera...', 'warning');
+      connectWebSocket();
       return;
     }
 
     const guessStr = currentDigits.join('');
-    ws.send(JSON.stringify({
-      type: 'player:guess',
-      roomId: currentRoomId,
-      playerId: playerId,
-      guess: guessStr
-    }));
+    try {
+      ws.send(JSON.stringify({
+        type: 'player:guess',
+        roomId: currentRoomId,
+        playerId: playerId,
+        guess: guessStr
+      }));
+    } catch (err) {
+      console.error('Error enviando intento:', err);
+      showToast('Error de red. Reconectando...', 'error');
+      connectWebSocket();
+    }
 
     vibrate(25);
   }
@@ -539,6 +546,27 @@
     } else if (e.key === 'Enter') {
       sendGuess();
     }
+  });
+
+  // Eventos de ciclo de vida móvil (desbloqueo de pantalla, cambio de app, retorno de Safari/Chrome)
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+      if (!ws || ws.readyState !== WebSocket.OPEN) {
+        console.log('📱 Celular activo de nuevo en primer plano. Verificando conexión...');
+        connectWebSocket();
+      }
+    }
+  });
+
+  window.addEventListener('pageshow', () => {
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+      connectWebSocket();
+    }
+  });
+
+  window.addEventListener('online', () => {
+    showToast('Conexión a internet restaurada', 'info');
+    connectWebSocket();
   });
 
   // Inicialización
